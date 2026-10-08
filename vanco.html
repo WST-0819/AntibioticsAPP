@@ -1,0 +1,1255 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Vancomycin 計算器</title>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--ink:#1a1d21;--muted:#6b7280;--line:#e3e6ea;--accent:#0c3d54;--accent2:#0e6f8f;
+--ok:#0f7b4f;--warn:#b45309;--bad:#b91c1c;--okbg:#e8f5ee;--warnbg:#fdf3e3;--badbg:#fdeaea;}
+@media (prefers-color-scheme:dark){:root{--bg:#14171a;--card:#1c2024;--ink:#e8eaed;--muted:#9aa3ad;--line:#2c3238;
+--accent:#7fc4dd;--accent2:#9fd6e8;--okbg:#123024;--warnbg:#3a2c12;--badbg:#3a1a1a;--ok:#5fd2a0;--warn:#e0a955;--bad:#f08b8b;}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 -apple-system,"Segoe UI","Noto Sans TC",sans-serif;padding:16px}
+.wrap{max-width:1100px;margin:0 auto}
+h1{font-size:20px;margin:0 0 12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:14px}
+.card h2{font-size:15px;margin:0 0 12px;color:var(--accent)}
+.card h3{font-size:13px;margin:14px 0 8px;color:var(--accent2);font-weight:600}
+.grid{display:grid;gap:10px 14px;grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
+label{display:block;font-size:12.5px;color:var(--muted);margin-bottom:3px}
+input,select{width:100%;padding:7px 9px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink);font-size:14px}
+input:focus,select:focus{outline:2px solid var(--accent2);outline-offset:-1px}
+input[readonly]{background:transparent;font-weight:600}
+.radios{display:flex;gap:14px;padding-top:6px}
+.radios label{color:var(--ink);font-size:14px;display:flex;align-items:center;gap:5px;margin:0}
+.radios input{width:auto}
+button{background:var(--accent);color:#fff;border:0;border-radius:6px;padding:9px 20px;font-size:14px;cursor:pointer}
+button.ghost{background:transparent;color:var(--muted);border:1px solid var(--line)}
+button.sm{padding:2px 10px;font-size:12px}
+.btnrow{display:flex;gap:10px;margin:4px 0 14px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line)}
+th{color:var(--muted);font-weight:500;font-size:12.5px}
+td.v{font-variant-numeric:tabular-nums;font-weight:600}
+tr.sec td{background:var(--bg);color:var(--accent2);font-weight:600;font-size:12.5px}
+.nav{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.nav button{background:var(--card);color:var(--muted);border:1px solid var(--line);border-radius:8px;padding:8px 16px;font-size:14px}
+.nav button.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.page{display:none}.page.on{display:block}
+.flag{padding:8px 10px;border-radius:6px;font-size:13px;margin-top:10px}
+.f-ok{background:var(--okbg);color:var(--ok)}.f-warn{background:var(--warnbg);color:var(--warn)}.f-bad{background:var(--badbg);color:var(--bad)}
+.note{font-size:12.5px;color:var(--muted);margin-top:10px;line-height:1.6}
+.err{font-size:12.5px;color:var(--bad);margin-top:8px}
+.two{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
+.scroll{overflow-x:auto}
+.unit{display:flex;align-items:center;padding:0 8px;border:1px solid var(--line);border-radius:6px;font-size:12px;color:var(--muted);white-space:nowrap}
+.cmp td,.cmp th{white-space:nowrap}
+.cmp tr.best{background:var(--okbg)}
+.cmp tr.best td:first-child::after{content:"建議";margin-left:6px;font-size:10.5px;background:var(--ok);color:#fff;padding:1px 6px;border-radius:8px}
+.cmp tr.bad{opacity:.5}
+.tag{font-size:11px;padding:1px 6px;border-radius:8px}
+.t-ok{background:var(--okbg);color:var(--ok)}.t-warn{background:var(--warnbg);color:var(--warn)}.t-bad{background:var(--badbg);color:var(--bad)}
+.alerts li{font-size:12.5px;color:var(--warn);margin-bottom:4px}
+canvas{max-width:100%;width:100%}
+.i{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;margin-left:5px;border:1px solid var(--muted);border-radius:50%;color:var(--muted);font:italic 700 10px/1 Georgia,serif;cursor:help;vertical-align:middle;user-select:none}
+.i:hover,.i.on{background:var(--accent2);border-color:var(--accent2);color:#fff}
+#tip{position:fixed;z-index:999;display:none;max-width:320px;padding:9px 11px;border-radius:7px;background:#1f2933;color:#f1f5f9;font-size:12.5px;line-height:1.6;white-space:pre-line;box-shadow:0 6px 20px rgba(0,0,0,.18);pointer-events:none}
+.dt{display:flex;gap:6px}.dt input[type=date]{flex:1.4}.dt input[type=text]{flex:1}
+button.rpt{background:var(--ok)}
+#rptBox{position:fixed;inset:0;z-index:1000;display:none;align-items:center;justify-content:center;background:rgba(15,20,25,.55);padding:16px}
+#rptBox.on{display:flex}
+#rptBox .dlg{background:var(--card);border:1px solid var(--line);border-radius:12px;width:min(820px,100%);max-height:calc(100vh - 32px);display:flex;flex-direction:column;box-shadow:0 20px 50px rgba(0,0,0,.3)}
+#rptBox .hd{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--line)}
+#rptBox .hd b{flex:1;color:var(--accent);font-size:15px}
+#rptBox .view{display:flex;flex-direction:column;min-height:0;flex:1}
+#rptBox .opts{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;padding:10px 16px 0}
+#rptBox .opts label{display:flex;align-items:center;gap:6px;margin:0;color:var(--muted);font-size:12.5px}
+#rptBox .opts select,#rptBox .opts input{width:auto;padding:4px 8px;font-size:13px}
+#rptBox .cloud{margin-left:auto;font-size:12.5px;color:var(--muted)}
+#rptBox .cloud a{color:var(--accent2)}
+#rptText,#te_text{flex:1;min-height:340px;margin:10px 16px;padding:12px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);
+  font:14px/1.7 ui-monospace,Menlo,Consolas,"Noto Sans TC",monospace;resize:vertical;white-space:pre-wrap}
+#rptBox .ft{display:flex;gap:8px;align-items:center;padding:0 16px 14px;flex-wrap:wrap}
+#rptBox .ft .msg{flex:1;font-size:12.5px;color:var(--ok)}
+.tehelp{padding:8px 16px 0;font-size:12.5px;color:var(--muted)}
+.tehelp code{background:var(--bg);padding:1px 4px;border-radius:4px}
+.toks{display:flex;flex-wrap:wrap;gap:5px;padding:0 16px 12px;max-height:130px;overflow:auto}
+.tok{background:var(--bg);color:var(--accent);border:1px solid var(--line);padding:3px 8px;font:12px ui-monospace,Menlo,monospace;border-radius:5px}
+.tok small{font-family:-apple-system,"Noto Sans TC",sans-serif;color:var(--muted);margin-left:5px;font-size:11px}
+.tok:hover{border-color:var(--accent2)}
+</style>
+</head>
+<body>
+<div id="tip"></div>
+<div id="rptBox"><div class="dlg">
+  <div class="hd"><b>📝 劑量建議</b><button class="ghost sm" onclick="closeReport()">關閉 ✕</button></div>
+
+  <div id="rptView" class="view">
+    <div class="opts">
+      <label>模板 <select id="ro_tpl" onchange="pickTpl()"></select></label>
+      <button class="ghost sm" onclick="openTplEditor()">✎ 編輯模板</button>
+      <label>Lab date <input type="date" id="ro_date" onchange="regenReport()"></label>
+      <span class="cloud" id="ro_cloud"></span>
+    </div>
+    <textarea id="rptText" spellcheck="false" oninput="RPT_DIRTY=true"></textarea>
+    <div class="ft"><span class="msg" id="rptMsg"></span>
+      <button class="ghost" onclick="regenReport()">↺ 重新產生</button>
+      <button onclick="copyReport()">複製文字</button></div>
+  </div>
+
+  <div id="tplView" class="view" style="display:none">
+    <div class="opts"><label style="flex:1">模板名稱 <input id="te_name" style="flex:1"></label></div>
+    <div class="tehelp">在內容中放入 <code>{欄位}</code>，產出時會自動換成數值；點下方按鈕可插入到游標位置。沒有數值的欄位會留空格。</div>
+    <textarea id="te_text" spellcheck="false" style="min-height:260px"></textarea>
+    <div class="toks" id="te_tokens"></div>
+    <div class="ft">
+      <button class="ghost" id="te_del" onclick="delTpl()" style="color:var(--bad)">刪除</button>
+      <span class="msg"></span>
+      <button class="ghost" onclick="closeTplEditor()">取消</button>
+      <button class="ghost" onclick="previewTpl()">預覽</button>
+      <button class="ghost" id="te_saveas" onclick="saveTpl(true)">另存新模板</button>
+      <button id="te_save" onclick="saveTpl(false)">儲存</button></div>
+  </div>
+</div></div>
+
+<div class="wrap">
+<h1>Vancomycin 計算器</h1>
+
+<div class="nav">
+  <button class="on" data-p="init">Initial Dosing</button>
+  <button data-p="sst">Steady-State Trough</button>
+  <button data-p="pt">Steady-State Peak &amp; Trough</button>
+</div>
+
+<!-- ============================ Initial Dosing ============================ -->
+<div class="page on" id="page-init">
+<div class="card">
+  <h2>病人資料</h2>
+  <div class="grid">
+    <div><label>Age (years)</label><input id="age" type="number"></div>
+    <div><label>SCr</label><div style="display:flex;gap:6px">
+      <input id="scr" type="number" step="0.01">
+      <span class="unit">mg/dL</span></div></div>
+    <div><label>Height</label><div style="display:flex;gap:6px">
+      <input id="ht" type="number" step="0.1">
+      <span class="unit">cm</span></div></div>
+    <div><label>Actual body weight</label><div style="display:flex;gap:6px">
+      <input id="wt" type="number" step="0.1">
+      <span class="unit">kg</span></div></div>
+    <div><label>性別</label>
+      <div class="radios">
+        <label><input type="radio" name="sex" value="M" checked>男</label>
+        <label><input type="radio" name="sex" value="F">女</label>
+      </div></div>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Goal</h2>
+  <div class="grid">
+    <div><label>Trough</label>
+      <div style="display:flex;gap:6px"><select id="i_grange"><option>10-15</option><option selected>15-20</option></select><span class="unit">mcg/mL</span></div></div>
+    <div><label>AUC₂₄</label>
+      <div style="padding:7px 0;font-weight:600">400–600 <span style="color:var(--muted);font-weight:400;font-size:12.5px">mg·hr/L</span></div></div>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Settings</h2>
+  <div class="grid">
+    <div><label>Infusion rate</label>
+      <div style="display:flex;gap:6px"><input id="rate" type="number" placeholder="自動"><span class="unit">mg/hr</span></div>
+      <div class="note" id="rateNote" style="margin-top:4px"></div></div>
+    <div><label>Amputations</label>
+      <select id="amp">
+        <option value="1">None</option>
+        <option value="0.985">Forearm (IBW -1.5%)</option>
+        <option value="0.96">Entire arm (IBW -4%)</option>
+        <option value="0.985">Foot (IBW -1.5%)</option>
+        <option value="0.965">Below knee (IBW -3.5%)</option>
+        <option value="0.89">Above knee (IBW -11%)</option>
+        <option value="0.84">Entire leg (IBW -16%)</option>
+        <option value="0.8">Multiple (IBW -20%)</option>
+        <option value="0.75">Multiple (IBW -25%)</option>
+        <option value="0.7">Multiple (IBW -30%)</option>
+        <option value="0.65">Multiple (IBW -35%)</option>
+      </select></div>
+    <div><label>IDMS SCr</label>
+      <div class="radios">
+        <label><input type="radio" name="idms" value="1">On</label>
+        <label><input type="radio" name="idms" value="0" checked>Off</label>
+      </div></div>
+    <div><label>Slope</label><input id="slope" type="number" step="0.001" value="1.065" disabled></div>
+    <div><label>Y-Intercept</label><input id="yint" type="number" step="0.001" value="0.067" disabled></div>
+  </div>
+</div>
+
+<div class="btnrow"><button onclick="calc()">計算</button><button class="ghost" onclick="clearPage('init')">重設</button></div>
+
+<div class="card">
+  <h2>Estimated PK Parameters</h2>
+  <div class="scroll"><table id="pk"></table></div>
+  <div class="note" id="pkNote"></div>
+</div>
+
+<div class="card">
+  <h2>Initial Dosing</h2>
+  <div class="two">
+    <div>
+      <div class="grid">
+        <div><label>負荷劑量 LD (mg)</label>
+          <select id="ld"><option value="0">0</option><option>750</option><option>1000</option><option>1250</option><option>1500</option><option>1750</option><option>2000</option><option>2250</option><option>2500</option><option>3000</option></select></div>
+        <div><label>LD 起始→維持劑量起始 (hr)</label><input id="ldgap" type="number" step="0.1"></div>
+        <div><label>劑量 Dose</label>
+          <div style="display:flex;gap:6px"><input id="doseAlt" type="number" step="250"><span class="unit">mg</span></div></div>
+        <div><label>間隔 Interval</label>
+          <div style="display:flex;gap:6px">
+            <select id="tau"><option>6</option><option>8</option><option>12</option><option>18</option><option>24</option><option>36</option><option>48</option><option>72</option></select>
+            <span class="unit">hrs</span></div></div>
+      </div>
+      <div class="btnrow" style="margin:10px 0 0"><button onclick="addCompare('init')">＋ 加入比較</button><button class="rpt" onclick="openReport('init')">📝 產出建議</button></div>
+      <div class="note" id="recNote"></div>
+    </div>
+    <div class="scroll"><table id="tInit"></table></div>
+  </div>
+  <div id="fInit"></div>
+  <ul class="alerts" id="aInit"></ul>
+</div>
+
+<div class="card"><h2>給藥方案比較</h2><div class="scroll"><table class="cmp" id="cmp_init"></table></div><div id="cmpNote_init"></div></div>
+<div class="card"><h2>藥動模擬圖</h2><canvas id="chart_init" height="260"></canvas></div>
+</div>
+
+<!-- ============================ Steady-State Trough ============================ -->
+<div class="page" id="page-sst">
+<div class="card">
+  <h2>病人資料</h2>
+  <div class="grid">
+    <div><label>Age (years)</label><input id="t_age" type="number"></div>
+    <div><label>SCr (mg/dL)</label><input id="t_scr" type="number" step="0.01"></div>
+    <div><label>Height (cm)</label><input id="t_ht" type="number" step="0.1"></div>
+    <div><label>Actual body weight (kg)</label><input id="t_wt" type="number" step="0.1"></div>
+    <div><label>性別</label>
+      <div class="radios">
+        <label><input type="radio" name="t_sex" value="M" checked>男</label>
+        <label><input type="radio" name="t_sex" value="F">女</label>
+      </div></div>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Goal</h2>
+  <div class="grid">
+    <div><label>Trough</label>
+      <div style="display:flex;gap:6px"><select id="s_grange"><option>10-15</option><option selected>15-20</option></select><span class="unit">mcg/mL</span></div></div>
+    <div><label>AUC₂₄</label>
+      <div style="padding:7px 0;font-weight:600">400–600 <span style="color:var(--muted);font-weight:400;font-size:12.5px">mg·hr/L</span></div></div>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Settings</h2>
+  <div class="grid">
+    <div><label>Infusion rate</label>
+      <div style="display:flex;gap:6px"><input id="s_rate" type="number" placeholder="自動"><span class="unit">mg/hr</span></div></div>
+    <div><label>Amputations</label>
+      <select id="t_amp">
+        <option value="1">None</option>
+        <option value="0.985">Forearm (IBW -1.5%)</option>
+        <option value="0.96">Entire arm (IBW -4%)</option>
+        <option value="0.985">Foot (IBW -1.5%)</option>
+        <option value="0.965">Below knee (IBW -3.5%)</option>
+        <option value="0.89">Above knee (IBW -11%)</option>
+        <option value="0.84">Entire leg (IBW -16%)</option>
+        <option value="0.8">Multiple (IBW -20%)</option>
+        <option value="0.75">Multiple (IBW -25%)</option>
+        <option value="0.7">Multiple (IBW -30%)</option>
+        <option value="0.65">Multiple (IBW -35%)</option>
+      </select></div>
+    <div><label>IDMS SCr</label>
+      <div class="radios">
+        <label><input type="radio" name="t_idms" value="1">On</label>
+        <label><input type="radio" name="t_idms" value="0" checked>Off</label>
+      </div></div>
+    <div><label>Slope</label><input id="t_slope" type="number" step="0.001" value="1.065" disabled></div>
+    <div><label>Y-Intercept</label><input id="t_yint" type="number" step="0.001" value="0.067" disabled></div>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Steady-State Trough</h2>
+  <div class="two">
+    <div>
+      <div class="grid">
+        <div style="grid-column:1/-1"><label>計算模式</label>
+          <select id="s_mode">
+            <option value="est">Use estimated Ke and Vd</option>
+            <option value="vd">Vd is known</option>
+            <option value="ke">Ke is known</option>
+          </select></div>
+        <div id="s_vdBox" style="display:none"><label>Vd (L)</label><input id="s_vd" type="number" step="0.1"></div>
+        <div id="s_keBox" style="display:none"><label>Ke (hr⁻¹)</label><input id="s_ke" type="number" step="0.0001"></div>
+        <div><label>目前劑量 (mg)</label><input id="s_dose" type="number" step="250"></div>
+        <div><label>目前間隔 τ (hr)</label>
+          <select id="s_tau"><option>6</option><option>8</option><option selected>12</option><option>18</option><option>24</option><option>36</option><option>48</option><option>72</option></select></div>
+        <div><label>量測濃度 (mcg/mL)</label><input id="s_c" type="number" step="0.1"></div>
+      </div>
+      <h3>給藥開始</h3>
+      <div class="dt"><input id="s_d1" type="date"><input id="s_t1" type="text" placeholder="HH:MM" inputmode="numeric" maxlength="5"></div>
+      <h3>抽血</h3>
+      <div class="dt"><input id="s_d2" type="date"><input id="s_t2" type="text" placeholder="HH:MM" inputmode="numeric" maxlength="5"></div>
+      <div class="grid" style="margin-top:10px">
+        <div><label>給藥開始→抽血 (hr)</label><input id="s_t" type="text" readonly></div>
+      </div>
+      <div class="btnrow" style="margin:14px 0 0"><button onclick="calcSST()">計算</button><button class="ghost" onclick="clearPage('sst')">重設</button></div>
+      <div class="err" id="s_err"></div>
+    </div>
+    <div class="scroll"><table id="tSST"></table></div>
+  </div>
+  <div id="fSST"></div><ul class="alerts" id="aSST"></ul>
+</div>
+
+<div class="card">
+  <h2>建議劑量</h2>
+  <div class="two">
+    <div>
+      <div class="grid">
+        <div><label>劑量 Dose</label>
+          <div style="display:flex;gap:6px"><input id="s_ndose" type="number" step="250"><span class="unit">mg</span></div></div>
+        <div><label>間隔 Interval</label>
+          <div style="display:flex;gap:6px">
+            <select id="s_ntau"><option>6</option><option>8</option><option>12</option><option>18</option><option>24</option><option>36</option><option>48</option><option>72</option></select>
+            <span class="unit">hrs</span></div></div>
+      </div>
+      <div class="btnrow" style="margin:10px 0 0"><button onclick="addCompare('sst')">＋ 加入比較</button><button class="rpt" onclick="openReport('sst')">📝 產出建議</button></div>
+      <div class="note" id="s_rec"></div>
+    </div>
+    <div class="scroll"><table id="s_adopt"></table></div>
+  </div>
+  <div id="fSSTn"></div>
+</div>
+
+<div class="card"><h2>給藥方案比較</h2><div class="scroll"><table class="cmp" id="cmp_sst"></table></div><div id="cmpNote_sst"></div></div>
+<div class="card"><h2>藥動模擬圖</h2><canvas id="chart_sst" height="260"></canvas></div>
+</div>
+
+<!-- ============================ Steady-State Peak & Trough ============================ -->
+<div class="page" id="page-pt">
+<div class="card">
+  <h2>Goal</h2>
+  <div class="grid">
+    <div><label>Trough</label>
+      <div style="display:flex;gap:6px"><select id="q_grange"><option>10-15</option><option selected>15-20</option></select><span class="unit">mcg/mL</span></div></div>
+    <div><label>AUC₂₄</label>
+      <div style="padding:7px 0;font-weight:600">400–600 <span style="color:var(--muted);font-weight:400;font-size:12.5px">mg·hr/L</span></div></div>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Settings</h2>
+  <div class="grid">
+    <div><label>Infusion rate</label>
+      <div style="display:flex;gap:6px"><input id="q_rate" type="number" placeholder="自動"><span class="unit">mg/hr</span></div></div>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Steady-State Peak &amp; Trough</h2>
+  <div class="two">
+    <div>
+      <div class="grid">
+        <div><label>劑量 (mg)</label><input id="q_dose" type="number" step="250"></div>
+        <div><label>間隔 τ (hr)</label>
+          <select id="q_tau"><option>6</option><option>8</option><option selected>12</option><option>18</option><option>24</option><option>36</option><option>48</option><option>72</option></select></div>
+        <div><label>Peak 濃度 (mcg/mL)</label><input id="q_pk" type="number" step="0.1"></div>
+        <div><label>Trough 濃度 (mcg/mL)</label><input id="q_tr" type="number" step="0.1"></div>
+      </div>
+      <div class="two" style="margin-top:4px">
+        <div>
+          <h3>Peak 給藥開始</h3>
+          <div class="dt"><input id="q_d0" type="date"><input id="q_h0" type="text" placeholder="HH:MM" inputmode="numeric" maxlength="5"></div>
+          <h3>Peak 抽血</h3>
+          <div class="dt"><input id="q_d1" type="date"><input id="q_h1" type="text" placeholder="HH:MM" inputmode="numeric" maxlength="5"></div>
+          <div style="margin-top:10px"><label>給藥開始→Peak (hr)</label><input id="q_tpk" type="text" readonly></div>
+        </div>
+        <div>
+          <h3>Trough 給藥開始</h3>
+          <div class="dt"><input id="q_d3" type="date"><input id="q_h3" type="text" placeholder="HH:MM" inputmode="numeric" maxlength="5"></div>
+          <h3>Trough 抽血</h3>
+          <div class="dt"><input id="q_d2" type="date"><input id="q_h2" type="text" placeholder="HH:MM" inputmode="numeric" maxlength="5"></div>
+          <div style="margin-top:10px"><label>給藥開始→Trough (hr)</label><input id="q_ttr" type="text" readonly></div>
+        </div>
+      </div>
+      <div class="btnrow" style="margin:14px 0 0"><button onclick="calcPT()">計算</button><button class="ghost" onclick="clearPage('pt')">重設</button></div>
+      <div class="err" id="q_err"></div>
+    </div>
+    <div class="scroll"><table id="tPT"></table></div>
+  </div>
+  <div id="fPT"></div><ul class="alerts" id="aPT"></ul>
+</div>
+
+<div class="card">
+  <h2>建議劑量</h2>
+  <div class="two">
+    <div>
+      <div class="grid">
+        <div><label>劑量 Dose</label>
+          <div style="display:flex;gap:6px"><input id="q_ndose" type="number" step="250"><span class="unit">mg</span></div></div>
+        <div><label>間隔 Interval</label>
+          <div style="display:flex;gap:6px">
+            <select id="q_ntau"><option>6</option><option>8</option><option>12</option><option>18</option><option>24</option><option>36</option><option>48</option><option>72</option></select>
+            <span class="unit">hrs</span></div></div>
+      </div>
+      <div class="btnrow" style="margin:10px 0 0"><button onclick="addCompare('pt')">＋ 加入比較</button><button class="rpt" onclick="openReport('pt')">📝 產出建議</button></div>
+      <div class="note" id="q_rec"></div>
+    </div>
+    <div class="scroll"><table id="q_adopt"></table></div>
+  </div>
+  <div id="fPTn"></div>
+</div>
+
+<div class="card"><h2>給藥方案比較</h2><div class="scroll"><table class="cmp" id="cmp_pt"></table></div><div id="cmpNote_pt"></div></div>
+<div class="card"><h2>藥動模擬圖</h2><canvas id="chart_pt" height="260"></canvas></div>
+</div>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const num=id=>parseFloat($(id).value);
+const r=(x,d=2)=>(isFinite(x)?x.toFixed(d):"—");
+const MROUND=(x,m)=>Math.round(x/m)*m;
+const EXP=Math.exp, LN=Math.log;
+const GP={init:'i',sst:'s',pt:'q'};
+function goal(ctx){
+  const x=GP[ctx], type='auc';
+  const range=$(x+'_grange').value, [lo,hi]=range.split('-').map(Number);
+  return {type,range,lo,hi,mid:(lo+hi)/2};
+}
+const tgt=goal;
+
+
+const REF={
+  CON:'Rybak MJ, et al. Therapeutic monitoring of vancomycin for serious MRSA infections: revised consensus guideline (ASHP/IDSA/PIDS/SIDP). Am J Health-Syst Pharm 2020;77:835-864.',
+  CG:'Cockcroft DW, Gault MH. Nephron 1976;16:31-41.',
+  SZ:'Sawchuk RJ, Zaske DE. J Pharmacokinet Biopharm 1976;4:183-195.',
+  AMP:'Osterkamp LK. J Am Diet Assoc 1995;95:215-218.',
+  SRC:'VancoPK calx 公式表',
+};
+const TIPS={
+  'SCr':'Cockcroft-Gault 使用。允許範圍 0.5–10 mg/dL。\nSCr <0.7 mg/dL 時會提示可考慮進位至 0.7（避免高估 CrCl）。\n'+REF.CG,
+  'SCr (mg/dL)':'Cockcroft-Gault 使用，用於族群 Ke 與預測濃度比對。\nSCr <0.7 mg/dL 時會提示可考慮進位至 0.7。\n'+REF.CG,
+  'Actual body weight':'族群 Vd 使用實際體重。\nCrCl 用體重：BMI <25 用實際體重；BMI ≥25 用 AdjBW = IBW + 0.4×(ABW − IBW)。',
+  'Actual body weight (kg)':'族群 Vd 使用實際體重。\nCrCl 用體重：BMI <25 用實際體重；BMI ≥25 用 AdjBW = IBW + 0.4×(ABW − IBW)。',
+  'AUC₂₄':'目標 AUC₂₄/MIC 400–600 mg·hr/L（假設 MIC = 1 mg/L）。\n2020 共識的建議對象為成人「嚴重 MRSA 感染」：菌血症、心內膜炎、骨髓炎、腦膜炎、肺炎、嚴重皮膚軟組織感染等。非嚴重感染證據不足，共識未作建議。\n'+REF.CON,
+  'Infusion rate':'留白＝自動：≤2000 mg 輸注 2 hr；2001–2500 mg 2.5 hr；2501–3000 mg 3 hr；>3000 mg 以 1000 mg/hr。\n填入數值時，本頁所有劑量（目前、建議、自訂、比較）都使用此速率。',
+  '藥動模擬圖':'以本頁 Ke、Vd 模擬一室模式間歇輸注的濃度曲線。Initial Dosing 含負荷劑量；濃度追蹤頁自穩態劑量起算。綠帶為 trough 目標範圍。',
+};
+/* 結果表欄位 */
+const RTIPS={
+  'AUC₂₄':'τ ≤24 hr：每日劑量 ÷ CL。\nτ >24 hr：給藥後 0–24 hr（輸注期梯形 + 排除期對數積分）。',
+};
+const info=t=>t?`<span class="i" data-tip="${t.replace(/"/g,'&quot;')}">i</span>`:'';
+function addTips(){
+  document.querySelectorAll('label,h2,h3').forEach(el=>{
+    if(el.querySelector('.i')||el.closest('.radios')) return;
+    const n=el.childNodes[0]; if(!n||n.nodeType!==3) return;
+    const k=n.textContent.trim(); if(TIPS[k]) n.after(document.createRange().createContextualFragment(info(TIPS[k])));
+  });
+}
+(function(){
+  const tip=document.getElementById('tip'); let pinned=null;
+  const show=el=>{ tip.textContent=el.dataset.tip; tip.style.display='block';
+    const r=el.getBoundingClientRect(), w=tip.offsetWidth, h=tip.offsetHeight;
+    let x=Math.min(Math.max(8,r.left+r.width/2-w/2),innerWidth-w-8), y=r.top-h-8; if(y<8) y=r.bottom+8;
+    tip.style.left=x+'px'; tip.style.top=y+'px'; };
+  const hide=()=>{ tip.style.display='none'; };
+  document.addEventListener('mouseover',e=>{const el=e.target.closest('.i'); if(el) show(el);});
+  document.addEventListener('mouseout',e=>{ if(e.target.closest('.i')&&!pinned) hide(); });
+  document.addEventListener('click',e=>{const el=e.target.closest('.i');
+    if(pinned){pinned.classList.remove('on');} if(el&&el!==pinned){pinned=el;el.classList.add('on');show(el);} else {pinned=null;hide();}});
+  addEventListener('scroll',()=>{ if(!pinned) hide(); else show(pinned); },true);
+})();
+
+let curPage='init';
+document.querySelectorAll('.nav button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('.nav button').forEach(x=>x.classList.remove('on'));
+  document.querySelectorAll('.page').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on'); curPage=b.dataset.p; $('page-'+curPage).classList.add('on');
+  run();
+});
+
+function tbl(el,rows){
+  $(el).innerHTML=!rows.length?'':'<tr><th>項目</th><th>數值</th><th>單位</th></tr>'+
+    rows.map(([k,v,u])=> (typeof k==='string'&&k.startsWith('§'))
+      ? `<tr class="sec"><td colspan="3">${k.slice(1)}</td></tr>`
+      : `<tr><td>${k}${info(RTIPS[k])}</td><td class="v">${v}</td><td style="color:var(--muted)">${u||''}</td></tr>`).join('');
+}
+function flagBox(v,lo,hi,nm,un,d){
+  if(!isFinite(v)) return '';
+  let c='f-ok',t=`${nm} 在目標範圍 ${lo}–${hi}`;
+  if(v<lo){c='f-warn';t=`${nm} 低於 ${lo}`;} else if(v>hi){c='f-bad';t=`${nm} 高於 ${hi}`;}
+  return `<div class="flag ${c}">${t}（${r(v,d)} ${un}）</div>`;
+}
+/* Initial：依 Settings 目標；TDM 頁：trough 10–20 */
+function flagHTML(ctx,auc,trough,prefix=''){
+  const g=goal(ctx);
+  return flagBox(auc,400,600,prefix+'AUC₂₄','mg·hr/L',0)+flagBox(trough,g.lo,g.hi,prefix+'Trough','mcg/mL',1);
+}
+function alerts(el,list){$(el).innerHTML=list.filter(Boolean).map(x=>`<li>${x}</li>`).join('');}
+
+/* ===== 基礎參數（T7-T18, W11-W14, ZE25, E26, T35, E28）；p='' Initial、p='t_' Trough 頁 ===== */
+/* 範圍檢查（VancoPK validators：SCr 0.5–10 mg/dL；Height 54–85 inch / 137.16–215.9 cm；Weight 29–275 kg / 64–606 lbs） */
+const RANGE={
+  scr:(v)=> (v>=0.5&&v<=10) ? '' : 'SCr should be between 0.5 and 10 mg/dL',
+  ht:(v,p)=> ($(p+'uHt')&&$(p+'uHt').value==='inch')
+      ? ((v>=54&&v<=85) ? '' : 'Height should be between 54 and 85 inch')
+      : ((v>=137.16&&v<=215.9) ? '' : 'Height should be between 138 and 215 cm'),
+  wt:(v,p)=> ($(p+'uWt')&&$(p+'uWt').value==='lbs')
+      ? ((v>=64&&v<=606) ? '' : 'Weight should be between 64 and 606 lbs')
+      : ((v>=29&&v<=275) ? '' : 'Weight should be between 29 and 275 kg'),
+};
+function fieldErr(p,k){
+  const el=$(p+k); if(!el||String(el.value).trim()==='') return '';
+  const v=parseFloat(el.value); if(!isFinite(v)) return 'Error: please enter valid number';
+  return RANGE[k](v,p);
+}
+function showRangeErr(){
+  ['','t_'].forEach(p=>['scr','ht','wt'].forEach(k=>{
+    const el=$(p+k); if(!el) return;
+    const cell=el.closest('.grid > div')||el.parentNode;
+    let d=document.getElementById('rerr_'+p+k);
+    if(!d){ d=document.createElement('div'); d.className='err'; d.id='rerr_'+p+k; d.style.marginTop='4px'; cell.appendChild(d); }
+    const m=fieldErr(p,k); d.textContent=m; el.style.borderColor=m?'var(--bad)':'';
+  }));
+}
+document.addEventListener('input',showRangeErr); document.addEventListener('change',showRangeErr);
+function patientOK(p){
+  return ['age','scr','ht','wt'].every(id=>isFinite(num(p+id))&&num(p+id)>0)
+      && ['scr','ht','wt'].every(k=>!fieldErr(p,k));
+}
+function base(p=''){
+  const g=id=>$(p+id);
+  const age=num(p+'age');
+  const scrIn = (g('uScr')&&g('uScr').value!=='mg/dL') ? num(p+'scr')/88.4 : num(p+'scr');
+  const htIn  = (g('uHt')&&g('uHt').value==='inch')    ? num(p+'ht')        : num(p+'ht')/2.54;
+  const wt    = (g('uWt')&&g('uWt').value==='lbs')     ? num(p+'wt')/2.2046 : num(p+'wt');
+  const sex=document.querySelector(`input[name=${p}sex]:checked`).value;
+  const htM=htIn*2.54/100, bmi=wt/(htM*htM);
+  const idmsOn = document.querySelector(`input[name=${p}idms]:checked`).value==='1';
+  const scr=idmsOn? scrIn*num(p+'slope')+num(p+'yint') : scrIn;
+  const ibw0=(sex==='M'?50:45.5)+2.3*(htIn-60);
+  const ibw=ibw0*(g('amp')?parseFloat(g('amp').value):1);
+  const w11 = bmi<25 ? wt : ibw+0.4*(wt-ibw);
+  const w13 = sex==='M'?1:0.85;
+  const cap = age<40?200:age<50?185:age<60?170:age<70?155:age<80?140:age<90?125:110;
+  const crcl = Math.min(((140-age)*w13*w11)/(72*scr), cap);
+  const CLv = ((0.75*crcl)+4)*0.06;
+  const Vd = 0.29*age + 0.33*wt + 11;
+  const Ke = Math.max(Math.min(CLv/Vd,0.2),0.008);
+  return {age,scr,scrIn,htIn,wt,sex,bmi,ibw,w11,crcl,CLv,Vd,Ke,half:0.693/Ke,idmsOn,capped:crcl>=cap-1e-9};
+}
+
+/* 輸注速率：各頁獨立欄位，留白 → 自動 */
+const RATEID={init:'rate',sst:'s_rate',pt:'q_rate'};
+let RID='rate';
+const useRate=ctx=>{RID=RATEID[ctx];};
+function autoTinf(dose){ if(dose<=2000) return 2; if(dose<=2500) return 2.5; if(dose<=3000) return 3; return dose/1000; }
+function effRate(dose){ const v=parseFloat($(RID).value); return (isFinite(v)&&v>0)? v : dose/autoTinf(dose); }
+const rateAuto=()=>!(parseFloat($(RID).value)>0);
+const Tinf=dose=>dose/effRate(dose);
+
+function ss(dose,tau,Ke,Vd){
+  const ti=Tinf(dose);
+  const Cmax=(dose*(1-EXP(-Ke*ti)))/(Ke*Vd*ti*(1-EXP(-Ke*tau)));
+  return {ti,Cmax,Cmin:Cmax*EXP(-Ke*(tau-ti))};
+}
+function auc24(dose,tau,Ke,Vd,CLv){
+  const {ti,Cmax,Cmin}=ss(dose,tau,Ke,Vd);
+  if(tau<=24) return (dose/tau)*24/CLv;
+  const C24=Cmax*EXP(-Ke*(24-ti));
+  return (Cmax+Cmin)/2*ti + ((Cmax-C24)*(24-ti))/LN(Cmax/C24);
+}
+function aucMin(dose,tau,Ke,Vd){
+  if(![36,48,72].includes(tau)) return NaN;
+  const {ti,Cmax}=ss(dose,tau,Ke,Vd);
+  const C=x=>Cmax*EXP(-Ke*(x-ti));
+  const [a,b]= tau===36?[12,36] : tau===48?[24,48] : [48,72];
+  return (C(a)-C(b))*24/LN(C(a)/C(b));
+}
+
+/* ---- Initial：目標 AUC 400-600 或 trough 範圍（原程式邏輯） ---- */
+const goalRange=()=>goal('init').range;
+const isAUC=()=>goal('init').type==='auc';
+const troughLim=()=>{const g=goal('init'); return [g.lo,g.hi];};
+const troughCoef=Vd=>({'15-20':[37,30],'14-19':[36,29],'13-18':[35,28],
+  '12-17':[34,27],'11-16':[33,26],'10-15':[32,25]}[goalRange()])[Vd<=75?0:1];
+function intervalByTrough(Ke,Vd){
+  const base=(Vd<=75?LN(35/15):LN(30/15))/Ke, lad=[8,12,18,24,36,48,72];
+  if(base<=8)return 8; if(base>=72)return 72;
+  for(let i=0;i<lad.length-1;i++) if(base>=lad[i]&&base<=lad[i+1])
+    return Math.abs(base-lad[i])<Math.abs(base-lad[i+1])?lad[i]:lad[i+1];
+  return 72;
+}
+function doseByTrough(tau,Ke,Vd){
+  const T24=MROUND(troughCoef(Vd)*Vd*(1-EXP(-Ke*tau)),250);
+  const {Cmin}=ss(T24,tau,Ke,Vd); const [lo,hi]=troughLim();
+  return Math.min((Cmin>=lo&&Cmin<=hi)?T24:(Cmin<lo?T24+250:T24-250),2000);
+}
+function pickInterval(Z,Vd){
+  if(Z<204) return 72; if(Z<410) return 48; if(Z<1312.5) return 24;
+  if(Z<1562.5) return Vd<30?8:(Vd<55?12:24);
+  if(Z<1812.5) return Vd>=60?24:12;
+  if(Z<2675) return 12; if(Z<3125) return Vd<55?8:12; if(Z<3550) return Vd>=65?12:8;
+  return 8;
+}
+function pickDose(targetDaily,tau,CLv){
+  const raw=MROUND(targetDaily/(24/tau),250);
+  const pred=(raw*(24/tau))/CLv;
+  const d=(pred>=400&&pred<=600)?raw:(pred<400?raw+250:raw-250);
+  return Math.max(Math.min(d,2000),500);
+}
+function planInit(Ke,Vd,CLv){
+  if(isAUC()){const T=550*CLv, tau=pickInterval(T,Vd); return {tau,dose:pickDose(T,tau,CLv)};}
+  const tau=intervalByTrough(Ke,Vd); return {tau,dose:doseByTrough(tau,Ke,Vd)};
+}
+
+/* ---- 建議劑量：先符合 AUC 400–600，再以 trough 落在目標範圍、最接近中點者優先 ---- */
+function suggest(pk,ctx,cap){
+  const g=goal(ctx), all=[];
+  for(const tau of [8,12,24,36,48]) for(let dose=500;dose<=cap;dose+=250){
+    const n=ss(dose,tau,pk.Ke,pk.Vd), auc=auc24(dose,tau,pk.Ke,pk.Vd,pk.CL), daily=dose*24/tau;
+    if(n.Cmax>40||daily>4000) continue;
+    all.push({dose,tau,auc,Cmin:n.Cmin,
+      aucOK:auc>=400&&auc<=600, trOK:n.Cmin>=g.lo&&n.Cmin<=g.hi,
+      trD:n.Cmin<g.lo?g.lo-n.Cmin:(n.Cmin>g.hi?n.Cmin-g.hi:0)});
+  }
+  if(!all.length) return {dose:500,tau:24};
+  const okA=all.filter(x=>x.aucOK);
+  const pool=okA.length?okA:all;
+  pool.sort((a,b)=> okA.length
+      ? (a.trD-b.trD) || (Math.abs(a.Cmin-g.mid)-Math.abs(b.Cmin-g.mid)) || (Math.abs(a.auc-500)-Math.abs(b.auc-500))
+      : Math.abs(a.auc-500)-Math.abs(b.auc-500));
+  return {dose:pool[0].dose,tau:pool[0].tau};
+}
+
+/* ---- TDM 頁：自動找出 trough 10–20 的改藥方案 ---- */
+function troughCandidates(pk,ctx){
+  const {Ke,Vd,CL}=pk, out=[]; const {lo:TLO,hi:THI,mid:TMID}=tgt(ctx);
+  for(const tau of [8,12,24,36,48]){
+    let d=1000;
+    for(let i=0;i<4;i++){ const c=ss(d,tau,Ke,Vd).Cmin; d=d*TMID/c; }
+    let dose=Math.min(Math.max(MROUND(d,250),500),3000);
+    let n=ss(dose,tau,Ke,Vd);
+    if(n.Cmin>THI&&dose>500){dose-=250;n=ss(dose,tau,Ke,Vd);}
+    else if(n.Cmin<TLO&&dose<3000){dose+=250;n=ss(dose,tau,Ke,Vd);}
+    const daily=dose*24/tau;
+    out.push({dose,tau,...n,daily,auc:auc24(dose,tau,Ke,Vd,CL),
+      ok:n.Cmin>=TLO&&n.Cmin<=THI&&n.Cmax<=40&&daily<=4000});
+  }
+  const pref=LN((Vd<=75?35:30)/15)/Ke;
+  const okList=out.filter(x=>x.ok);
+  const rec=(okList.length?okList:out).slice().sort((a,b)=>
+    okList.length? Math.abs(a.tau-pref)-Math.abs(b.tau-pref) : Math.abs(a.Cmin-TMID)-Math.abs(b.Cmin-TMID))[0];
+  return {list:out,rec};
+}
+function renderCandidates(ctx,el,cand){
+  $(el).innerHTML='<tr><th>方案</th><th>每日總量</th><th>Peak_ss</th><th>Trough_ss</th><th>AUC₂₄</th><th>評估</th><th></th></tr>'+
+    cand.list.map(x=>{
+      const isRec=x===cand.rec;
+      const tag=x.ok?'<span class="tag t-ok">符合</span>'
+        : x.Cmax>40?'<span class="tag t-bad">Peak >40</span>'
+        : x.daily>4000?'<span class="tag t-bad">日劑量 >4 g</span>'
+        : '<span class="tag t-bad">未達目標</span>';
+      return `<tr class="${isRec&&x.ok?'best':(x.ok?'':'bad')}"><td class="v">${x.dose} mg q${x.tau}h</td>`+
+        `<td class="v">${r(x.daily,0)} mg</td><td class="v">${r(x.Cmax,1)}</td><td class="v">${r(x.Cmin,1)}</td>`+
+        `<td class="v">${r(x.auc,0)}</td><td>${tag}</td>`+
+        `<td><button class="ghost sm" onclick="useCand('${ctx}',${x.dose},${x.tau})">採用</button></td></tr>`;
+    }).join('');
+}
+function useCand(ctx,dose,tau){
+  const [di,ti]=IN[ctx]; $(di).value=dose; $(ti).value=tau; S[ctx].td=S[ctx].tt=true;
+  addCompare(ctx); run();
+}
+
+/* ===== 狀態 ===== */
+const IN={init:['doseAlt','tau','recNote'],sst:['s_ndose','s_ntau','s_rec'],pt:['q_ndose','q_ntau','q_rec']};
+const newState=()=>({pk:null,res:null,err:'',list:[],td:false,tt:false,auto:false});
+let S={init:newState(),sst:newState(),pt:newState()};
+let computed=false;
+
+function syncRegimen(ctx,rec){
+  const [di,ti,ri]=IN[ctx], st=S[ctx];
+  if(!st.td) $(di).value=rec.dose;
+  if(!st.tt) $(ti).value=rec.tau;
+  $(ri).innerHTML=`系統建議 <b>${rec.dose} mg q${rec.tau}h</b>`
+    +((st.td||st.tt)?'　<span style="color:var(--warn)">目前為手動輸入值</span>':'');
+  const dose=num(di)||rec.dose, tau=parseFloat($(ti).value)||rec.tau;
+  if(!st.auto){ st.auto=true; if(!st.list.some(x=>x.dose===dose&&x.tau===tau)) st.list.push({dose,tau}); }
+  return {dose,tau};
+}
+function adoptedRows(pk,dose,tau){
+  const {ti,Cmax,Cmin}=ss(dose,tau,pk.Ke,pk.Vd);
+  const a=auc24(dose,tau,pk.Ke,pk.Vd,pk.CL), am=aucMin(dose,tau,pk.Ke,pk.Vd);
+  const rows=[
+    ['採用方案',`${dose} mg q${tau}h`,''],
+    ['每日總劑量',r(dose*24/tau,0),'mg/day'],
+    ['輸注速率',r(effRate(dose),0),'mg/hr'],
+    ['輸注時間',r(ti,2),'hr'],
+    ['Peak_ss',r(Cmax,1),'mcg/mL'],
+    ['Trough_ss',r(Cmin,1),'mcg/mL'],
+    ['AUC₂₄',r(a,0),'mg·hr/L'],
+  ];
+  if(isFinite(am)) rows.push(['AUC₂₄ min',r(am,0),'mg·hr/L']);
+  return {rows,auc:a,Cmin,Cmax};
+}
+
+/* Ke 疊代（T65 → T85） */
+function solveKeSST(dose,tau,C,t,Vd,ti){
+  const tr=K=>(dose/(ti*K*Vd)*(1-EXP(-K*ti)))*EXP(-K*(t-ti))/(1-EXP(-K*tau));
+  const K0=LN(((dose/Vd)+C)/C)/((t+tau)/2);
+  const t66=tr(K0), t67=(t66/C)*K0;
+  const t68=tr(t67), t69=(t68/C)*t67;
+  const t71=(t67+t69)/2, t72=tr(t71), t73=(t72/C)*t71;
+  const t75=(t71+t73)/2, t76=tr(t75), t77=(t76/C)*t75;
+  const t79=(t75+t77)/2, t80=tr(t79), t81=(t80/C)*t79;
+  const t83=(t79+t81)/2;
+  return (t83+t81)/2;
+}
+/* 時間解析：接受 8:30、08:30、0830、830 */
+function parseHM(s){
+  s=(s||'').trim(); let m=s.match(/^(\d{1,2}):(\d{2})$/)||s.match(/^(\d{1,2})(\d{2})$/);
+  if(!m) return null; const H=+m[1], M=+m[2];
+  return (H<24&&M<60)?{H,M}:null;
+}
+function dtHours(d1,t1,d2,t2){
+  const a=parseHM(t1), b=parseHM(t2); if(!d1||!d2||!a||!b) return NaN;
+  const A=new Date(d1+'T00:00'), B=new Date(d2+'T00:00');
+  A.setHours(a.H,a.M); B.setHours(b.H,b.M);
+  return (B-A)/3600000;
+}
+
+function run(){
+  if(computed) runInit();
+  liveSST(); livePT(); showSST(); showPT();
+  ['init','sst','pt'].forEach(renderCompare);
+}
+
+/* ===================== Initial Dosing ===================== */
+function runInit(){
+  useRate('init');
+  if(!patientOK('')){ $('pkNote').innerHTML='<span style="color:var(--warn)">請先完整填寫病人資料，並修正超出範圍的數值</span>'; showRangeErr(); S.init.pk=null; return; }
+  const b=base('');
+  tbl('pk',[['CrCl',r(b.crcl,0),'mL/min'],['CLvanco',r(b.CLv,2),'L/hr'],['Vd',r(b.Vd,0),'L'],
+    ['Ke',r(b.Ke,4),'hr⁻¹'],['Half-life',r(b.half,1),'hrs']]);
+  $('pkNote').textContent=`IBW ${r(b.ibw,1)} kg・BMI ${r(b.bmi,1)}・CrCl 用體重 ${r(b.w11,1)} kg`+(b.capped?'・CrCl 已達年齡上限':'');
+  $('slope').disabled=!b.idmsOn; $('yint').disabled=!b.idmsOn;
+
+  const pk={Ke:b.Ke,Vd:b.Vd,CL:b.CLv}; S.init.pk=pk;
+  const {dose,tau}=syncRegimen('init',suggest(pk,'init',2000));
+  const ad=adoptedRows(pk,dose,tau);
+  const LD=parseFloat($('ld').value), gap=num('ldgap');
+  let ldRows=[], peakLD=NaN;
+  if(LD>0){
+    const tiLD=Tinf(LD);
+    peakLD=(LD*(1-EXP(-b.Ke*tiLD)))/(tiLD*b.Ke*(b.Vd*1.25));
+    ldRows=[['LD Peak',r(peakLD,1),'mcg/mL'],['維持劑量開始時濃度',r(peakLD*EXP(-b.Ke*(gap-tiLD)),1),'mcg/mL']];
+  }
+  tbl('tInit',[...ldRows,...ad.rows]);
+  $('fInit').innerHTML=flagHTML('init',ad.auc,ad.Cmin);
+  $('rateNote').innerHTML = rateAuto()? `自動 ${r(effRate(dose),0)} mg/hr・輸注 ${r(Tinf(dose),1)} hr` : `輸注 ${r(Tinf(dose),1)} hr`;
+  alerts('aInit',[
+    b.scrIn<0.7?'SCr <0.7 mg/dL，建議進位至 0.7。':'',
+    tau>=36?'給藥間隔 >24 小時時，間隔前 24 小時的 AUC 高於後 24 小時。':'',
+    (tau===8 && dose/b.wt>18)?'劑量 >18 mg/kg q8h，考慮降低維持劑量。':'',
+    dose*(24/tau)>4000?'日劑量 >4 g，通常保留給 <55 歲、>110 kg、CrCl >150 的病人。':'',
+    (LD>0&&peakLD>40)?'負荷劑量可能造成 Peak >40 mcg/mL，考慮降低。':'',
+    ad.auc>700?'AUC₂₄ 可能 >700，考慮降低每日總劑量。':'',
+  ]);
+}
+
+/* 建議劑量區塊（TDM 頁共用） */
+function runSuggest(ctx,pk,candEl,adoptEl,flagEl){
+  const {dose,tau}=syncRegimen(ctx,suggest(pk,ctx,3000));
+  const ad=adoptedRows(pk,dose,tau);
+  tbl(adoptEl,ad.rows);
+  $(flagEl).innerHTML=flagHTML(ctx,ad.auc,ad.Cmin,'建議劑量 ');
+  return {dose,tau,ad};
+}
+function clearSuggest(p){ [p+'_adopt',p+'_rec'].forEach(id=>$(id).innerHTML=''); }
+
+/* ===================== Steady-State Trough ===================== */
+/* 輸入時只做即時顯示（不計算） */
+function liveSST(){
+  const mode=$('s_mode').value;
+  $('s_vdBox').style.display = mode==='vd'?'':'none';
+  $('s_keBox').style.display = mode==='ke'?'':'none';
+  $('t_slope').disabled=$('t_yint').disabled=document.querySelector('input[name=t_idms]:checked').value!=='1';
+  const t=dtHours($('s_d1').value,$('s_t1').value,$('s_d2').value,$('s_t2').value);
+  $('s_t').value = isFinite(t)? r(t,2) : '';
+  return t;
+}
+/* 按「計算」才執行 */
+function calcSST(){
+  useRate('sst');
+  Object.assign(S.sst,{td:false,tt:false,auto:false,list:[]});
+  const mode=$('s_mode').value, t=liveSST();
+  const clear=msg=>{ S.sst.pk=null; S.sst.res=null; S.sst.err=msg; run(); };
+
+  const pOK=patientOK('t_'), b=pOK?base('t_'):null;
+  const dose=num('s_dose'), tau=parseFloat($('s_tau').value), C=num('s_c');
+  if(mode==='est' && !pOK){ showRangeErr(); return clear('請輸入病人資料，並修正超出範圍的數值。'); }
+  if(!(dose>0&&C>0)) return clear('請輸入目前劑量與量測濃度。');
+  if(!isFinite(t)) return clear('請輸入給藥開始與抽血的日期、時間（HH:MM）。');
+  if(t<=0) return clear('抽血時間必須晚於給藥開始。');
+  if(mode==='vd' && !(num('s_vd')>0)) return clear('請輸入 Vd。');
+  if(mode==='ke' && !(num('s_ke')>0)) return clear('請輸入 Ke。');
+  const ti=Tinf(dose);
+  if(t<0.5+ti) return clear(`抽血時間需 ≥ ${r(0.5+ti,2)} hr（輸注結束後 30 分鐘）。`);
+  $('s_err').textContent='';
+
+  let Vd,Ke;
+  if(mode==='ke'){ Ke=num('s_ke'); Vd=(dose*EXP(-Ke*(t-ti))*(1-EXP(-Ke*ti)))/(C*ti*Ke*(1-EXP(-Ke*tau))); }
+  else { Vd = mode==='vd'?num('s_vd'):b.Vd; Ke=solveKeSST(dose,tau,C,t,Vd,ti); }
+  if(!(isFinite(Ke)&&Ke>0&&isFinite(Vd)&&Vd>0)) return clear('無解，請檢查輸入資料。');
+
+  const CL=Vd*Ke, pk={Ke,Vd,CL};
+  const AUC=((dose/tau)*24)/CL;
+  const trTau = t<=tau ? C*EXP(-Ke*(tau-t)) : C/EXP(-Ke*(t-tau));
+  let popAtT=NaN;
+  if(b){ const pop=ss(dose,tau,b.Ke,b.Vd); popAtT=pop.Cmax*EXP(-b.Ke*(t-pop.ti)); }
+  S.sst.pk=pk; S.sst.err='';
+  S.sst.res={AUC,trTau,
+    rows:[['Vd',r(Vd,1),'L'],['Ke',r(Ke,4),'hr⁻¹'],['Half-life',r(0.693/Ke,1),'hr'],['CLvanco',r(CL,2),'L/hr'],
+      ['推算谷值',r(trTau,1),'mcg/mL'],['目前 AUC₂₄',r(AUC,0),'mg·hr/L']],
+    alerts:[
+      mode==='est'?'使用族群 Ke 與 Vd，AUC₂₄ 僅為估計值。':'',
+      AUC>700?'目前 AUC₂₄ 可能 >700，考慮降低每日總劑量。':'',
+      (b&&b.scrIn<0.7)?'SCr <0.7 mg/dL，建議進位至 0.7。':'',
+      (isFinite(popAtT)&&Math.abs(C-popAtT)>10)?`量測濃度與族群預測值（${r(popAtT,1)} mcg/mL）相差 >10，請確認病人資料。`:'',
+    ]};
+  run();
+}
+/* 顯示結果：建議劑量、自訂劑量依目前 Goal／輸入即時更新 */
+function showSST(){
+  useRate('sst');
+  const st=S.sst, res=st.res;
+  $('s_err').textContent=st.err||'';
+  if(!res){ ['tSST','fSST','aSST','fSSTn'].forEach(id=>$(id).innerHTML=''); clearSuggest('s'); return; }
+  tbl('tSST',res.rows);
+  $('fSST').innerHTML=flagHTML('sst',res.AUC,res.trTau,'目前 ');
+  const sg=runSuggest('sst',st.pk,'s_cand','s_adopt','fSSTn');
+  alerts('aSST',[...res.alerts, sg.tau>=36?'給藥間隔 >24 小時時，間隔前 24 小時的 AUC 高於後 24 小時。':'']);
+}
+
+/* ===================== Steady-State Peak & Trough ===================== */
+function livePT(){
+  const tp=dtHours($('q_d0').value,$('q_h0').value,$('q_d1').value,$('q_h1').value);
+  const ttRaw=dtHours($('q_d3').value,$('q_h3').value,$('q_d2').value,$('q_h2').value);
+  $('q_tpk').value=isFinite(tp)?r(tp,2):'';
+  $('q_ttr').value=isFinite(ttRaw)?(ttRaw<0?`${r(ttRaw,2)}（給藥前）`:r(ttRaw,2)):'';
+  return {tp,ttRaw};
+}
+function calcPT(){
+  useRate('pt');
+  Object.assign(S.pt,{td:false,tt:false,auto:false,list:[]});
+  const clear=msg=>{ S.pt.pk=null; S.pt.res=null; S.pt.err=msg; run(); };
+  const dose=num('q_dose'), tau=parseFloat($('q_tau').value),
+        Cp=num('q_pk'), Ct=num('q_tr');
+  const {tp,ttRaw}=livePT();
+  /* 穩態下，給藥前抽的 trough 等同上一間隔末：t + τ */
+  const tt = ttRaw<0 ? ttRaw+tau : ttRaw;
+  if(!(dose>0&&Cp>0&&Ct>0)) return clear('請輸入劑量與 Peak、Trough 濃度。');
+  if(!isFinite(tp)||!isFinite(tt)) return clear('請輸入 Peak、Trough 的給藥開始與抽血日期、時間（HH:MM）。');
+  if(tt<0) return clear('Trough 抽血距給藥開始超過一個間隔，請確認時間。');
+  if(tp<=0) return clear('Peak 抽血時間必須晚於給藥開始。');
+  const ti=Tinf(dose);
+  if(tp<0.5+ti) return clear(`Peak 抽血時間需 ≥ ${r(0.5+ti,2)} hr（輸注結束後 30 分鐘）。`);
+  if(tt<=tp) return clear('Trough 抽血時間必須晚於 Peak。');
+  if(Ct>=Cp) return clear('Trough 濃度必須低於 Peak。');
+  $('q_err').textContent='';
+
+  const dt=tt-tp, Ke=LN(Cp/Ct)/dt;
+  const Cmax=Cp/EXP(-Ke*(tp-ti));
+  const Cmin= tt<=tau ? Ct*EXP(-Ke*(tau-tt)) : Ct/EXP(-Ke*(tt-tau));
+  const Vd=dose*(1-EXP(-Ke*ti))/(Ke*ti*(Cmax-Cmin*EXP(-Ke*ti)));
+  if(!(isFinite(Vd)&&Vd>0)) return clear('無解，請檢查輸入資料。');
+  const CL=Ke*Vd, pk={Ke,Vd,CL};
+  const AUC=((dose/tau)*24)/CL, half=0.693/Ke;
+  S.pt.pk=pk; S.pt.err='';
+  S.pt.res={AUC,trTau:Cmin,
+    rows:[['Ke',r(Ke,4),'hr⁻¹'],['Half-life',r(half,1),'hr'],['Cmax',r(Cmax,1),'mcg/mL'],['Cmin',r(Cmin,1),'mcg/mL'],
+      ['Vd',r(Vd,1),'L'],['CLvanco',r(CL,2),'L/hr'],['目前 AUC₂₄',r(AUC,0),'mg·hr/L']],
+    alerts:[
+      dt<0.8*half?'兩點抽血時間可能太接近，Ke 未必準確。':'',
+      AUC>700?'目前 AUC₂₄ 可能 >700，考慮降低每日總劑量。':'',
+    ]};
+  run();
+}
+function showPT(){
+  useRate('pt');
+  const st=S.pt, res=st.res;
+  $('q_err').textContent=st.err||'';
+  if(!res){ ['tPT','fPT','aPT','fPTn'].forEach(id=>$(id).innerHTML=''); clearSuggest('q'); return; }
+  tbl('tPT',res.rows);
+  $('fPT').innerHTML=flagHTML('pt',res.AUC,res.trTau,'目前 ');
+  const sg=runSuggest('pt',st.pk,'q_cand','q_adopt','fPTn');
+  alerts('aPT',[...res.alerts, sg.tau>=36?'給藥間隔 >24 小時時，間隔前 24 小時的 AUC 高於後 24 小時。':'']);
+}
+
+/* ===== 重設 ===== */
+const PAGE_IDS={
+  init:['age','scr','ht','wt','rate','doseAlt','ldgap'],
+  sst:['t_age','t_scr','t_ht','t_wt','s_vd','s_ke','s_dose','s_rate','s_c','s_t1','s_t2','s_t','s_ndose','s_ntau'],
+  pt:['q_dose','q_rate','q_pk','q_tr','q_h0','q_h1','q_h2','q_h3','q_tpk','q_ttr','q_ndose','q_ntau'],
+};
+const today=()=>{const d=new Date(); d.setMinutes(d.getMinutes()-d.getTimezoneOffset()); return d.toISOString().slice(0,10);};
+function clearPage(ctx){
+  S[ctx]=newState();
+  PAGE_IDS[ctx].forEach(id=>{ $(id).value=''; });
+  if(ctx==='init'){
+    computed=false; $('ld').value='0';
+    ['pk','tInit','pkNote','recNote','rateNote','fInit','aInit'].forEach(id=>$(id).innerHTML='');
+  }
+  if(ctx==='sst'){ $('s_mode').value='est'; $('t_amp').value='1'; ['s_d1','s_d2'].forEach(id=>$(id).value=today()); }
+  if(ctx==='pt'){ ['q_d0','q_d1','q_d2','q_d3'].forEach(id=>$(id).value=today()); }
+  run();
+  if(ctx==='init') renderCompare('init');
+}
+function calc(){
+  computed=true; Object.assign(S.init,{td:false,tt:false,auto:false});
+  run();
+}
+
+/* ===== 產出建議（罐頭訊息）＋ 個人模板 ===== */
+let RPT_CTX='init';
+/* 部署 Apps Script 後，把網址填在這裡，所有人就不用再自行貼上 */
+const GAS_URL_DEFAULT='https://script.google.com/macros/s/AKfycbwYfsV7pkOU27cfJ0Sp3EjUmh-is30njPv50YYefCNxLQK9N_XgLzaeIiFoWUS1zlD6Mg/exec';
+const n0=x=>isFinite(x)?Math.round(x).toLocaleString('en-US'):'';
+const BL='      ';   /* 待填處：以空格呈現 */
+
+/* ---------- 可用欄位 ---------- */
+const TOKENS=[
+  ['date','檢驗日期'],['age','年齡'],['sex','性別 M/F'],['ht','身高 cm'],['bw','體重 kg'],['bmi','BMI'],['ibw','IBW kg'],
+  ['scr','SCr'],['crcl','CrCl'],['levels','目前劑量與濃度（TDM 頁才有，含換行）'],
+  ['vd','Vd'],['vdkg','Vd L/kg'],['ke','Ke'],['half','t½'],['cl','CL'],['target_trough','目標 trough 範圍'],
+  ['regimen','建議方案整句（含 loading、Adjust/Continue）'],['ld','負荷劑量 mg'],['dose','維持劑量 mg'],['tau','間隔 h'],
+  ['tinf','輸注時間 hr'],['daily','每日劑量 mg'],['mgkg','mg/kg/dose'],
+  ['est_peak','預估 Peak'],['est_trough','預估 Trough'],['est_auc','預估 AUC₂₄'],
+  ['cur_dose','目前劑量 mg'],['cur_tau','目前間隔 h'],['cur_trough','目前推算 trough'],['cur_auc','目前 AUC₂₄'],
+];
+const DEFAULT_TPL=`Impression & Assessment
+1.{age} y/o {sex}, Ht {ht} cm, BW {bw} kg (BMI {bmi}), admitted due to ${BL}
+2.{date} SCr {scr} mg/dL, CrCl {crcl} mL/min{levels}
+3.Vancomycin PK: Vd {vd} L, Ke {ke} hr⁻¹, t½ {half} hr, CL {cl} L/hr
+4.Target: AUC₂₄ 400–600 mg·hr/L, trough {target_trough} mcg/mL
+
+Suggestion
+1.{regimen}; estimated trough {est_trough} mcg/mL, AUC₂₄ {est_auc} mg·hr/L
+2.Follow trough at ${BL} on ${BL}`;
+
+function rptPatient(ctx){
+  const order = ctx==='init'?['']:['t_',''];
+  for(const p of order) if(patientOK(p)) return base(p);
+  return null;
+}
+function reportVars(ctx){
+  useRate(ctx);
+  if(ctx==='init' && !computed) run();
+  const st=S[ctx];
+  if(!st.pk) return null;
+  const pk=st.pk, b=rptPatient(ctx), g=goal(ctx);
+  const dose=num(IN[ctx][0]), tau=parseFloat($(IN[ctx][1]).value);
+  const s=ss(dose,tau,pk.Ke,pk.Vd), auc=auc24(dose,tau,pk.Ke,pk.Vd,pk.CL);
+  const V={};
+  V.date=($('ro_date').value||'').replace(/-/g,'/');
+  if(b) Object.assign(V,{age:n0(b.age),sex:b.sex,ht:r(b.htIn*2.54,1),bw:r(b.wt,1),bmi:r(b.bmi,1),ibw:r(b.ibw,1),
+                         scr:r(b.scrIn,2),crcl:r(b.crcl,0),vdkg:r(pk.Vd/b.wt,2),mgkg:r(dose/b.wt,1)});
+  Object.assign(V,{vd:r(pk.Vd,1),ke:r(pk.Ke,4),half:r(0.693/pk.Ke,1),cl:r(pk.CL,2),target_trough:`${g.lo}–${g.hi}`,
+    dose:n0(dose),tau:String(tau),tinf:r(s.ti,1),daily:n0(dose*24/tau),
+    est_peak:r(s.Cmax,1),est_trough:r(s.Cmin,1),est_auc:n0(auc),levels:''});
+  const reg=`${n0(dose)} mg IVD q${tau}h (infuse over ${r(s.ti,1)} hr)`;
+  if(ctx==='init'){
+    const LD=parseFloat($('ld').value);
+    V.ld = LD>0 ? n0(LD) : '';
+    V.regimen = LD>0 ? `Vancomycin loading dose ${n0(LD)} mg IVD ST, then ${reg}` : `Vancomycin ${reg}`;
+  }else if(st.res){
+    const cd=num(ctx==='sst'?'s_dose':'q_dose'), ct=parseFloat($(ctx==='sst'?'s_tau':'q_tau').value);
+    Object.assign(V,{cur_dose:n0(cd),cur_tau:String(ct),cur_trough:r(st.res.trTau,1),cur_auc:n0(st.res.AUC)});
+    V.regimen = (cd===dose&&ct===tau) ? `Continue vancomycin ${reg}` : `Adjust vancomycin to ${reg}`;
+    V.levels = ctx==='sst'
+      ? `\n   Vancomycin ${n0(cd)} mg q${ct}h, level ${r(num('s_c'),1)} mcg/mL (drawn ${$('s_t').value||BL} hr after start of infusion)`
+        +`\n   → estimated trough ${r(st.res.trTau,1)} mcg/mL, AUC₂₄ ${n0(st.res.AUC)} mg·hr/L`
+      : `\n   Vancomycin ${n0(cd)} mg q${ct}h, peak ${r(num('q_pk'),1)} mcg/mL (${$('q_tpk').value||BL} hr after start), trough ${r(num('q_tr'),1)} mcg/mL`
+        +`\n   → Cmax ${r(ss(cd,ct,pk.Ke,pk.Vd).Cmax,1)}, Cmin ${r(st.res.trTau,1)} mcg/mL, AUC₂₄ ${n0(st.res.AUC)} mg·hr/L`;
+  }
+  return V;
+}
+function fillTpl(tpl,V){
+  return tpl.replace(/\{(\w+)\}/g,(m,k)=>{
+    if(!TOKENS.some(t=>t[0]===k)) return m;
+    const v=V[k];
+    return (v==null||v===''||v==='—') ? (k==='levels'?'':BL.slice(0,3)) : v;
+  });
+}
+function buildReport(ctx){
+  const V=reportVars(ctx);
+  if(!V) return '尚未完成計算。\n請先填妥本頁資料並按「計算」，再產出建議。';
+  return fillTpl(curTpl().text,V);
+}
+
+/* ---------- 模板儲存：本機（含主程式代存）＋ Google 雲端 ---------- */
+const TPL_KEY='vanco_tpl_v1';
+let TPL={list:[],sel:0,gasUrl:'',email:'',ts:0};
+function tplLoad(){
+  let raw=null;
+  try{ raw=localStorage.getItem(TPL_KEY); }catch(e){}
+  if(!raw && window.__ABX_TPL) raw=window.__ABX_TPL;     // 內嵌於抗生素查詢系統時由主程式代存
+  try{ if(raw) TPL=Object.assign(TPL,JSON.parse(raw)); }catch(e){}
+  if(GAS_URL_DEFAULT) TPL.gasUrl=GAS_URL_DEFAULT;
+  if(!Array.isArray(TPL.list)) TPL.list=[];
+}
+function tplStoreLocal(){
+  const raw=JSON.stringify(TPL);
+  try{ localStorage.setItem(TPL_KEY,raw); }catch(e){}
+  try{ if(window.parent!==window) window.parent.postMessage({type:'vanco-tpl-store',data:raw},'*'); }catch(e){}
+}
+function curTpl(){
+  if(TPL.sel>0 && TPL.list[TPL.sel-1]) return TPL.list[TPL.sel-1];
+  return {name:'系統預設',text:DEFAULT_TPL};
+}
+function renderTplSel(){
+  $('ro_tpl').innerHTML=['<option value="0">系統預設</option>',
+    ...TPL.list.map((t,i)=>`<option value="${i+1}">${t.name.replace(/</g,'&lt;')}</option>`)].join('');
+  $('ro_tpl').value=String(TPL.sel);
+  $('ro_cloud').innerHTML = TPL.email
+    ? `☁ ${TPL.email.replace(/</g,'&lt;')}　<a href="#" onclick="cloudSync('load');return false">同步</a>・<a href="#" onclick="cloudLogout();return false">登出</a>`
+    : `<a href="#" onclick="cloudSync('load');return false">以 Google 登入，同步個人模板</a>`;
+}
+function pickTpl(){
+  TPL.sel=+$('ro_tpl').value; TPL.ts=Date.now(); tplStoreLocal(); regenReport();
+}
+
+/* ---------- 模板編輯 ---------- */
+let EDIT_IDX=0;   // 0 = 新模板
+function openTplEditor(){
+  const t=curTpl(); EDIT_IDX=TPL.sel;
+  $('te_name').value = TPL.sel>0 ? t.name : '我的模板';
+  $('te_text').value = t.text;
+  $('te_del').style.display = TPL.sel>0 ? '' : 'none';
+  $('te_saveas').style.display = TPL.sel>0 ? '' : 'none';
+  $('te_save').textContent = TPL.sel>0 ? '儲存' : '儲存為新模板';
+  $('te_tokens').innerHTML = TOKENS.map(([k,d])=>`<button class="tok" title="${d}" onclick="insTok('${k}')">{${k}}<small>${d}</small></button>`).join('');
+  $('rptView').style.display='none'; $('tplView').style.display='flex';
+}
+function closeTplEditor(){ $('tplView').style.display='none'; $('rptView').style.display='flex'; }
+function insTok(k){
+  const ta=$('te_text'), s=ta.selectionStart, e=ta.selectionEnd, v='{'+k+'}';
+  ta.value=ta.value.slice(0,s)+v+ta.value.slice(e); ta.focus(); ta.selectionStart=ta.selectionEnd=s+v.length;
+}
+function previewTpl(){
+  const V=reportVars(RPT_CTX);
+  alert(V ? fillTpl($('te_text').value,V) : '請先完成計算才能預覽。');
+}
+function saveTpl(asNew){
+  const name=$('te_name').value.trim()||'我的模板', text=$('te_text').value;
+  if(!text.trim()) return alert('模板內容不能空白。');
+  if(EDIT_IDX>0 && !asNew){ TPL.list[EDIT_IDX-1]={name,text}; TPL.sel=EDIT_IDX; }
+  else { TPL.list.push({name,text}); TPL.sel=TPL.list.length; }
+  TPL.ts=Date.now(); tplStoreLocal(); renderTplSel(); closeTplEditor(); regenReport(true);
+  if(TPL.email) cloudSync('save'); else msg('✓ 已存在本機。登入 Google 可跨電腦使用。');
+}
+function delTpl(){
+  if(!(EDIT_IDX>0) || !confirm(`刪除模板「${TPL.list[EDIT_IDX-1].name}」？`)) return;
+  TPL.list.splice(EDIT_IDX-1,1); TPL.sel=0; TPL.ts=Date.now();
+  tplStoreLocal(); renderTplSel(); closeTplEditor(); regenReport(true);
+  if(TPL.email) cloudSync('save');
+}
+function msg(t,bad){ $('rptMsg').textContent=t; $('rptMsg').style.color=bad?'var(--bad)':'var(--ok)'; }
+
+/* ---------- Google 雲端（Apps Script，以使用者本人身分執行） ---------- */
+let SYNC=null;
+function cloudSync(action){
+  if(!TPL.gasUrl){
+    const u=prompt('請貼上「模板雲端同步」的 Apps Script 網址（https://script.google.com/macros/s/…/exec）：','');
+    if(!u) return;
+    if(!/^https:\/\/script\.google\.com\/(a\/[^/]+\/)?macros\/s\/[\w-]+\/exec/.test(u.trim())) return alert('網址格式不正確。');
+    TPL.gasUrl=u.trim(); tplStoreLocal();
+  }
+  const nonce=Math.random().toString(36).slice(2)+Date.now();
+  const w=window.open('','vanco_gsync','width=480,height=600');
+  if(!w) return msg('彈出視窗被瀏覽器封鎖，請允許後再試。',true);
+  const f=document.createElement('form');
+  f.method='POST'; f.action=TPL.gasUrl; f.target='vanco_gsync'; f.style.display='none';
+  const add=(k,v)=>{ const i=document.createElement('input'); i.type='hidden'; i.name=k; i.value=v; f.appendChild(i); };
+  add('action',action); add('nonce',nonce);
+  if(action==='save') add('data',JSON.stringify({list:TPL.list,sel:TPL.sel,ts:TPL.ts}));
+  document.body.appendChild(f); f.submit(); f.remove();
+  SYNC={nonce,win:w,action};
+  msg(action==='save'?'☁ 上傳中…（首次使用需在彈出視窗授權）':'☁ 連線 Google 中…（首次使用需在彈出視窗授權）');
+}
+addEventListener('message',e=>{
+  const d=e.data;
+  if(!d||d.type!=='vanco-sync'||!SYNC||d.nonce!==SYNC.nonce) return;
+  try{ SYNC.win.close(); }catch(_){}
+  const action=SYNC.action; SYNC=null;
+  if(!d.ok) return msg('☁ 同步失敗：'+(d.error||'未知錯誤'),true);
+  TPL.email=d.email||'(已登入)';
+  if(action==='load'){
+    let cloud=null; try{ cloud=d.data?JSON.parse(d.data):null; }catch(_){}
+    if(cloud && Array.isArray(cloud.list)){
+      if(TPL.list.length && JSON.stringify(TPL.list)!==JSON.stringify(cloud.list) && (TPL.ts||0)>(cloud.ts||0)
+         && confirm('本機的模板比雲端新，要上傳本機模板覆蓋雲端嗎？\n（取消＝改用雲端模板）')){
+        tplStoreLocal(); renderTplSel(); return cloudSync('save');
+      }
+      TPL.list=cloud.list; TPL.ts=cloud.ts||0;
+      TPL.sel = (cloud.sel>0 && cloud.sel<=TPL.list.length) ? cloud.sel : 0;
+      msg(`☁ 已載入雲端模板 ${TPL.list.length} 個`);
+    }else if(TPL.list.length){
+      tplStoreLocal(); renderTplSel(); return cloudSync('save');      // 雲端還沒有 → 上傳本機
+    }else msg('☁ 已登入，雲端尚無模板');
+    tplStoreLocal(); renderTplSel(); regenReport(true);
+  }else{ tplStoreLocal(); renderTplSel(); msg('☁ 已儲存到 Google 雲端'); }
+});
+function cloudLogout(){
+  if(!confirm('登出會清除這台電腦上的模板副本（雲端仍保留，下次登入即可取回）。確定登出？')) return;
+  TPL.email=''; TPL.list=[]; TPL.sel=0; TPL.ts=0; tplStoreLocal(); renderTplSel(); regenReport(true); msg('已登出');
+}
+
+/* ---------- 視窗 ---------- */
+let RPT_DIRTY=false;
+function openReport(ctx){
+  RPT_CTX=ctx; msg('');
+  tplLoad(); renderTplSel(); closeTplEditor();
+  $('ro_date').value = (ctx==='sst'?$('s_d2').value : ctx==='pt'?$('q_d2').value : '') || today();
+  $('rptText').value=buildReport(ctx); RPT_DIRTY=false;
+  $('rptBox').classList.add('on');
+}
+function regenReport(force){
+  if(RPT_DIRTY && force!==true && !confirm('重新產生會覆蓋目前修改的內容，確定嗎？')) return;
+  $('rptText').value=buildReport(RPT_CTX); RPT_DIRTY=false;
+}
+function closeReport(){ $('rptBox').classList.remove('on'); }
+async function copyReport(){
+  const t=$('rptText');
+  try{ await navigator.clipboard.writeText(t.value); }
+  catch(e){ t.select(); document.execCommand('copy'); }
+  msg('✓ 已複製');
+}
+
+/* ===== 方案比較 ===== */
+function addCompare(ctx){
+  if(!S[ctx].pk) return;
+  const dose=num(IN[ctx][0]), tau=parseFloat($(IN[ctx][1]).value);
+  if(!(dose>0&&tau>0)) return;
+  if(!S[ctx].list.some(x=>x.dose===dose&&x.tau===tau)) S[ctx].list.push({dose,tau});
+  renderCompare(ctx);
+}
+function removeCompare(ctx,i){ S[ctx].list.splice(i,1); renderCompare(ctx); }
+function clearCompare(ctx){ S[ctx].list=[]; renderCompare(ctx); }
+function renderCompare(ctx){
+  useRate(ctx);
+  const st=S[ctx], pk=st.pk, el='cmp_'+ctx, ne='cmpNote_'+ctx;
+  if(!pk||!st.list.length){ $(el).innerHTML=''; $(ne).innerHTML=''; redrawChart(ctx); return; }
+  const wt = ctx==='init'?(patientOK('')?base('').wt:NaN):(patientOK('t_')&&ctx==='sst'?base('t_').wt:NaN);
+  const rows=st.list.map(({dose,tau})=>{
+    const {ti,Cmax,Cmin}=ss(dose,tau,pk.Ke,pk.Vd);
+    const a=auc24(dose,tau,pk.Ke,pk.Vd,pk.CL);
+    const iss=[];
+    if(tau===8 && dose/wt>18) iss.push('>18 mg/kg q8h');
+    if(dose*(24/tau)>4000) iss.push('日劑量 >4 g');
+    if(a>700) iss.push('AUC >700');
+    if(Cmax>40) iss.push('Peak >40');
+    const g=goal(ctx);
+    const inGoal = a>=400&&a<=600;
+    if(Cmin<g.lo) iss.push('Trough 偏低'); else if(Cmin>g.hi) iss.push('Trough 偏高');
+    return {dose,tau,ti,Cmax,Cmin,auc:a,iss,feasible:inGoal&&dose*(24/tau)<=4000&&Cmax<=40};
+  });
+  $(el).innerHTML='<tr><th>方案</th><th>每日總量</th><th>輸注速率</th><th>T_inf</th><th>Peak_ss</th><th>Trough_ss</th><th>AUC₂₄</th><th>評估</th><th></th></tr>'+
+    rows.map((x,i)=>{
+      const tag=!x.feasible?'<span class="tag t-bad">未達目標</span>'
+        : x.iss.length?`<span class="tag t-warn">${x.iss[0]}</span>` : '<span class="tag t-ok">適用</span>';
+      return `<tr class="${x.feasible&&!x.iss.length?'best':(x.feasible?'':'bad')}">`+
+        `<td class="v">${x.dose} mg q${x.tau}h</td><td class="v">${r(x.dose*24/x.tau,0)} mg</td>`+
+        `<td class="v">${r(effRate(x.dose),0)} mg/hr</td><td class="v">${r(x.ti,1)} hr</td>`+
+        `<td class="v">${r(x.Cmax,1)}</td><td class="v">${r(x.Cmin,1)}</td><td class="v">${r(x.auc,0)}</td>`+
+        `<td>${tag}</td><td><button class="ghost sm" onclick="removeCompare('${ctx}',${i})">移除</button></td></tr>`;
+    }).join('');
+  $(ne).innerHTML=`<div class="btnrow" style="margin:10px 0 0"><button class="ghost" onclick="clearCompare('${ctx}')">清空比較</button></div>`;
+  redrawChart(ctx);
+}
+
+/* ===== 濃度-時間曲線 ===== */
+const SERIES_COLORS=['#0e6f8f','#b45309','#0f7b4f','#b91c1c','#6d28d9','#0891b2','#be185d','#4d7c0f'];
+function seriesCurve(pk,dose,tau,LD,gap,tEnd){
+  const {Ke,Vd}=pk, events=[]; let t0=0;
+  if(LD>0){ events.push({start:0,dose:LD,vd:Vd*1.25}); t0=gap; }
+  for(let st=t0; st<tEnd-1e-9; st+=tau) events.push({start:st,dose,vd:Vd});
+  const pts=[], step=Math.max(0.05,tEnd/1200);
+  for(let t=0;t<=tEnd+1e-9;t+=step){
+    let c=0;
+    for(const e of events){
+      const ti=Tinf(e.dose); if(t<=e.start) continue;
+      if(t<e.start+ti) c+=(e.dose/ti)/(Ke*e.vd)*(1-EXP(-Ke*(t-e.start)));
+      else c+=(e.dose/ti)/(Ke*e.vd)*(1-EXP(-Ke*ti))*EXP(-Ke*(t-e.start-ti));
+    }
+    pts.push([t,c]);
+  }
+  return pts;
+}
+function redrawChart(ctx){
+  const c=$('chart_'+ctx), g=c.getContext('2d');
+  const st=S[ctx], pk=st.pk;
+  if(!pk||!$('page-'+ctx).classList.contains('on')){ g.clearRect(0,0,c.width,c.height); return; }
+  useRate(ctx);
+  const LD=ctx==='init'?(parseFloat($('ld').value)||0):0, gap=ctx==='init'?(num('ldgap')||0):0;
+  const cur={dose:num(IN[ctx][0]),tau:parseFloat($(IN[ctx][1]).value)};
+  const list=[]; if(cur.dose>0&&cur.tau>0) list.push(cur);
+  st.list.forEach(x=>{ if(!list.some(y=>y.dose===x.dose&&y.tau===x.tau)) list.push(x); });
+  const W=c.width=c.clientWidth*2, H=c.height=520;
+  g.clearRect(0,0,W,H); if(!list.length) return;
+  const maxTau=Math.max(...list.map(x=>x.tau));
+  const tEnd=Math.max(72,Math.ceil(((LD>0?gap:0)+maxTau*3)/24)*24);
+  const series=list.map((x,i)=>({...x,pts:seriesCurve(pk,x.dose,x.tau,LD,gap,tEnd),color:SERIES_COLORS[i%SERIES_COLORS.length]}));
+  const maxY=Math.max(40,Math.ceil(Math.max(...series.flatMap(s=>s.pts.map(p=>p[1])))/10)*10);
+  const pad=90, w=W-pad*1.4, h=H-pad*1.5-40;
+  const X=t=>pad+t/tEnd*w, Y=v=>H-pad/1.5-v/maxY*h;
+  const css=getComputedStyle(document.body);
+  const ink=css.getPropertyValue('--ink')||'#000', line=css.getPropertyValue('--line')||'#ddd';
+  g.strokeStyle=line; g.lineWidth=1; g.fillStyle=ink; g.font='26px sans-serif'; g.textAlign='right';
+  for(let v=0;v<=maxY;v+=10){ g.beginPath(); g.moveTo(pad,Y(v)); g.lineTo(pad+w,Y(v)); g.stroke(); g.fillText(v,pad-12,Y(v)+9); }
+  {
+    const tg=goal(ctx); g.fillStyle='rgba(15,123,79,0.08)'; g.fillRect(pad,Y(tg.hi),w,Y(tg.lo)-Y(tg.hi)); g.fillStyle=ink;
+  }
+  for(let tt=0;tt<=tEnd;tt+=Math.max(6,Math.round(tEnd/8/6)*6)) {g.textAlign='center'; g.fillText(tt,X(tt),H-52);}
+  g.font='bold 28px sans-serif'; g.textAlign='left'; g.fillText('濃度 (mcg/mL)',pad-60,32); g.textAlign='right'; g.fillText('時間 (小時)',pad+w,H-90); g.font='26px sans-serif'; g.textAlign='left';
+  series.forEach(s=>{
+    g.strokeStyle=s.color; g.lineWidth=3; g.beginPath();
+    s.pts.forEach((p,i)=> i?g.lineTo(X(p[0]),Y(p[1])):g.moveTo(X(p[0]),Y(p[1]))); g.stroke();
+  });
+  let lx=pad;
+  series.forEach(s=>{
+    const label=`${s.dose} mg q${s.tau}h`;
+    g.fillStyle=s.color; g.fillRect(lx,H-22,28,8); g.fillStyle=ink; g.fillText(label,lx+36,H-10);
+    lx+=36+g.measureText(label).width+30;
+  });
+}
+
+/* ===== 事件 ===== */
+Object.entries(IN).forEach(([k,[di,ti]])=>{
+  $(di).addEventListener('input',()=>{S[k].td=true;});
+  $(ti).addEventListener('input',()=>{S[k].tt=true;});
+});
+/* HH:MM 自動補冒號 */
+['s_t1','s_t2','q_h0','q_h1','q_h2','q_h3'].forEach(id=>$(id).addEventListener('input',e=>{
+  const v=e.target.value.replace(/[^\d:]/g,'');
+  e.target.value = (/^\d{3,4}$/.test(v)&&!v.includes(':')&&v.length===4)? v.slice(0,2)+':'+v.slice(2) : v;
+}));
+document.querySelectorAll('input,select').forEach(e=>e.addEventListener('input',run));
+window.addEventListener('resize',()=>redrawChart(curPage));
+['s_d1','s_d2','q_d0','q_d1','q_d2','q_d3'].forEach(id=>$(id).value=today());
+addTips();
+run();
+</script>
+</body>
+</html>
