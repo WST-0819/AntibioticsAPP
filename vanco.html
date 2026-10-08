@@ -74,8 +74,10 @@ button.rpt{background:var(--ok)}
 #rptBox .ft .msg{flex:1;font-size:12.5px;color:var(--ok)}
 .tehelp{padding:8px 16px 0;font-size:12.5px;color:var(--muted)}
 .tehelp code{background:var(--bg);padding:1px 4px;border-radius:4px}
-.toks{display:flex;flex-wrap:wrap;gap:5px;padding:0 16px 12px;max-height:130px;overflow:auto}
-.tok{background:var(--bg);color:var(--accent);border:1px solid var(--line);padding:3px 8px;font:12px ui-monospace,Menlo,monospace;border-radius:5px}
+.toks{display:flex;flex-direction:column;gap:6px;padding:0 16px 12px;max-height:190px;overflow:auto}
+.tokg{display:flex;flex-wrap:wrap;gap:5px;align-items:center}
+.tokg b{font-size:12px;color:var(--muted);font-weight:600;width:100%}
+.tok{background:var(--bg);color:var(--accent);border:1px solid var(--line);padding:3px 9px;font:13px -apple-system,"Noto Sans TC",sans-serif;border-radius:5px}
 .tok small{font-family:-apple-system,"Noto Sans TC",sans-serif;color:var(--muted);margin-left:5px;font-size:11px}
 .tok:hover{border-color:var(--accent2)}
 </style>
@@ -100,7 +102,7 @@ button.rpt{background:var(--ok)}
 
   <div id="tplView" class="view" style="display:none">
     <div class="opts"><label style="flex:1">模板名稱 <input id="te_name" style="flex:1"></label></div>
-    <div class="tehelp">在內容中放入 <code>{欄位}</code>，產出時會自動換成數值；點下方按鈕可插入到游標位置。沒有數值的欄位會留空格。</div>
+    <div class="tehelp">點下方的項目，會在游標位置插入 <code>{年齡}</code> 這類標記，產出時自動換成計算器上的數值；沒有數值的項目會留空格。其他文字照你輸入的內容輸出。</div>
     <textarea id="te_text" spellcheck="false" style="min-height:260px"></textarea>
     <div class="toks" id="te_tokens"></div>
     <div class="ft">
@@ -926,24 +928,39 @@ let RPT_CTX='init';
 const n0=x=>isFinite(x)?Math.round(x).toLocaleString('en-US'):'';
 const BL='      ';   /* 待填處：以空格呈現 */
 
-/* ---------- 可用欄位 ---------- */
+/* ---------- 可用欄位：模板中寫 {名稱}，名稱即計算器上顯示的項目 ---------- */
+/* [名稱, 內部代碼, 說明, 分組] */
 const TOKENS=[
-  ['date','檢驗日期'],['age','年齡'],['sex','性別 M/F'],['ht','身高 cm'],['bw','體重 kg'],['bmi','BMI'],['ibw','IBW kg'],
-  ['scr','SCr'],['crcl','CrCl'],['levels','目前劑量與濃度（TDM 頁才有，含換行）'],
-  ['vd','Vd'],['vdkg','Vd L/kg'],['ke','Ke'],['half','t½'],['cl','CL'],['target_trough','目標 trough 範圍'],
-  ['regimen','建議方案整句（含 loading、Adjust/Continue）'],['ld','負荷劑量 mg'],['dose','維持劑量 mg'],['tau','間隔 h'],
-  ['tinf','輸注時間 hr'],['daily','每日劑量 mg'],['mgkg','mg/kg/dose'],
-  ['est_peak','預估 Peak'],['est_trough','預估 Trough'],['est_auc','預估 AUC₂₄'],
-  ['cur_dose','目前劑量 mg'],['cur_tau','目前間隔 h'],['cur_trough','目前推算 trough'],['cur_auc','目前 AUC₂₄'],
+  ['檢驗日期','date','建議視窗上方的 Lab date','病人資料'],
+  ['年齡','age','歲','病人資料'],['性別','sex','M／F','病人資料'],
+  ['身高','ht','cm','病人資料'],['體重','bw','kg','病人資料'],
+  ['BMI','bmi','','病人資料'],['IBW','ibw','kg','病人資料'],
+  ['SCr','scr','mg/dL','病人資料'],['CrCl','crcl','mL/min','病人資料'],
+  ['Vd','vd','L','藥動參數'],['Ke','ke','hr⁻¹','藥動參數'],['半衰期','half','hr','藥動參數'],['CL','cl','L/hr','藥動參數'],
+  ['目標Trough','target_trough','Goal 設定，如 15–20','藥動參數'],
+  ['建議方案','regimen','整句，含負荷劑量／Adjust／Continue','建議劑量'],
+  ['負荷劑量','ld','mg，Initial Dosing 頁','建議劑量'],
+  ['維持劑量','dose','mg','建議劑量'],['給藥間隔','tau','小時，如 12','建議劑量'],
+  ['每日劑量','daily','mg/day','建議劑量'],['輸注速率','rate','mg/hr','建議劑量'],['輸注時間','tinf','hr','建議劑量'],
+  ['預估Peak','est_peak','mcg/mL','建議劑量'],['預估Trough','est_trough','mcg/mL','建議劑量'],['預估AUC','est_auc','mg·hr/L','建議劑量'],
+  ['濃度紀錄','levels','目前劑量、抽血濃度與推算值（含換行）','血中濃度（TDM 頁）'],
+  ['目前劑量','cur_dose','mg','血中濃度（TDM 頁）'],['目前間隔','cur_tau','小時','血中濃度（TDM 頁）'],
+  ['目前Trough','cur_trough','推算穩態谷值 mcg/mL','血中濃度（TDM 頁）'],['目前AUC','cur_auc','mg·hr/L','血中濃度（TDM 頁）'],
 ];
+const TOK_BY_NAME=Object.fromEntries(TOKENS.map(t=>[t[0],t[1]]));
+const TOK_BY_CODE=Object.fromEntries(TOKENS.map(t=>[t[1],t[0]]));
+/* 舊版模板（{age} 這類代碼）自動轉成名稱 */
+function tplMigrate(text){
+  return String(text||'').replace(/\{(\w+)\}/g,(m,k)=> TOK_BY_CODE[k] ? '{'+TOK_BY_CODE[k]+'}' : (k==='vdkg'||k==='mgkg') ? '' : m);
+}
 const DEFAULT_TPL=`Impression & Assessment
-1.{age} y/o {sex}, Ht {ht} cm, BW {bw} kg (BMI {bmi}), admitted due to ${BL}
-2.{date} SCr {scr} mg/dL, CrCl {crcl} mL/min{levels}
-3.Vancomycin PK: Vd {vd} L, Ke {ke} hr⁻¹, t½ {half} hr, CL {cl} L/hr
-4.Target: AUC₂₄ 400–600 mg·hr/L, trough {target_trough} mcg/mL
+1.{年齡} y/o {性別}, Ht {身高} cm, BW {體重} kg (BMI {BMI}), admitted due to ${BL}
+2.{檢驗日期} SCr {SCr} mg/dL, CrCl {CrCl} mL/min{濃度紀錄}
+3.Vancomycin PK: Vd {Vd} L, Ke {Ke} hr⁻¹, t½ {半衰期} hr, CL {CL} L/hr
+4.Target: AUC₂₄ 400–600 mg·hr/L, trough {目標Trough} mcg/mL
 
 Suggestion
-1.{regimen}; estimated trough {est_trough} mcg/mL, AUC₂₄ {est_auc} mg·hr/L
+1.{建議方案}; estimated trough {預估Trough} mcg/mL, AUC₂₄ {預估AUC} mg·hr/L
 2.Follow trough at ${BL} on ${BL}`;
 
 function rptPatient(ctx){
@@ -962,9 +979,9 @@ function reportVars(ctx){
   const V={};
   V.date=($('ro_date').value||'').replace(/-/g,'/');
   if(b) Object.assign(V,{age:n0(b.age),sex:b.sex,ht:r(b.htIn*2.54,1),bw:r(b.wt,1),bmi:r(b.bmi,1),ibw:r(b.ibw,1),
-                         scr:r(b.scrIn,2),crcl:r(b.crcl,0),vdkg:r(pk.Vd/b.wt,2),mgkg:r(dose/b.wt,1)});
+                         scr:r(b.scrIn,2),crcl:r(b.crcl,0),});
   Object.assign(V,{vd:r(pk.Vd,1),ke:r(pk.Ke,4),half:r(0.693/pk.Ke,1),cl:r(pk.CL,2),target_trough:`${g.lo}–${g.hi}`,
-    dose:n0(dose),tau:String(tau),tinf:r(s.ti,1),daily:n0(dose*24/tau),
+    dose:n0(dose),tau:String(tau),tinf:r(s.ti,1),rate:n0(effRate(dose)),daily:n0(dose*24/tau),
     est_peak:r(s.Cmax,1),est_trough:r(s.Cmin,1),est_auc:n0(auc),levels:''});
   const reg=`${n0(dose)} mg IVD q${tau}h (infuse over ${r(s.ti,1)} hr)`;
   if(ctx==='init'){
@@ -984,8 +1001,8 @@ function reportVars(ctx){
   return V;
 }
 function fillTpl(tpl,V){
-  return tpl.replace(/\{(\w+)\}/g,(m,k)=>{
-    if(!TOKENS.some(t=>t[0]===k)) return m;
+  return tplMigrate(tpl).replace(/\{([^{}\n]+)\}/g,(m,name)=>{
+    const k=TOK_BY_NAME[name.trim()]; if(!k) return m;
     const v=V[k];
     return (v==null||v===''||v==='—') ? (k==='levels'?'':BL.slice(0,3)) : v;
   });
@@ -1032,11 +1049,13 @@ let EDIT_IDX=0;   // 0 = 新模板
 function openTplEditor(){
   const t=curTpl(); EDIT_IDX=TPL.sel;
   $('te_name').value = TPL.sel>0 ? t.name : '我的模板';
-  $('te_text').value = t.text;
+  $('te_text').value = tplMigrate(t.text);
   $('te_del').style.display = TPL.sel>0 ? '' : 'none';
   $('te_saveas').style.display = TPL.sel>0 ? '' : 'none';
   $('te_save').textContent = TPL.sel>0 ? '儲存' : '儲存為新模板';
-  $('te_tokens').innerHTML = TOKENS.map(([k,d])=>`<button class="tok" title="${d}" onclick="insTok('${k}')">{${k}}<small>${d}</small></button>`).join('');
+  const groups=[...new Set(TOKENS.map(t=>t[3]))];
+  $('te_tokens').innerHTML = groups.map(g=>`<div class="tokg"><b>${g}</b>`+
+    TOKENS.filter(t=>t[3]===g).map(([n,,d])=>`<button class="tok" title="${d}" onclick="insTok('${n}')">${n}${d?`<small>${d}</small>`:''}</button>`).join('')+'</div>').join('');
   $('rptView').style.display='none'; $('tplView').style.display='flex';
 }
 function closeTplEditor(){ $('tplView').style.display='none'; $('rptView').style.display='flex'; }
