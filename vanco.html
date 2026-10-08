@@ -923,8 +923,6 @@ function calc(){
 
 /* ===== 產出建議（罐頭訊息）＋ 個人模板 ===== */
 let RPT_CTX='init';
-/* 部署 Apps Script 後，把網址填在這裡，所有人就不用再自行貼上 */
-const GAS_URL_DEFAULT='https://script.google.com/macros/s/AKfycbwYfsV7pkOU27cfJ0Sp3EjUmh-is30njPv50YYefCNxLQK9N_XgLzaeIiFoWUS1zlD6Mg/exec';
 const n0=x=>isFinite(x)?Math.round(x).toLocaleString('en-US'):'';
 const BL='      ';   /* 待填處：以空格呈現 */
 
@@ -1000,13 +998,12 @@ function buildReport(ctx){
 
 /* ---------- 模板儲存：本機（含主程式代存）＋ Google 雲端 ---------- */
 const TPL_KEY='vanco_tpl_v1';
-let TPL={list:[],sel:0,gasUrl:'',email:'',ts:0};
+let TPL={list:[],sel:0,email:'',ts:0};
 function tplLoad(){
   let raw=null;
   try{ raw=localStorage.getItem(TPL_KEY); }catch(e){}
   if(!raw && window.__ABX_TPL) raw=window.__ABX_TPL;     // 內嵌於抗生素查詢系統時由主程式代存
   try{ if(raw) TPL=Object.assign(TPL,JSON.parse(raw)); }catch(e){}
-  if(GAS_URL_DEFAULT) TPL.gasUrl=GAS_URL_DEFAULT;
   if(!Array.isArray(TPL.list)) TPL.list=[];
 }
 function tplStoreLocal(){
@@ -1023,7 +1020,7 @@ function renderTplSel(){
     ...TPL.list.map((t,i)=>`<option value="${i+1}">${t.name.replace(/</g,'&lt;')}</option>`)].join('');
   $('ro_tpl').value=String(TPL.sel);
   $('ro_cloud').innerHTML = TPL.email
-    ? `☁ ${TPL.email.replace(/</g,'&lt;')}　<a href="#" onclick="cloudSync('load');return false">同步</a>・<a href="#" onclick="cloudLogout();return false">登出</a>`
+    ? `☁ ${TPL.email.replace(/</g,'&lt;')}　<a href="#" onclick="cloudSync('load');return false">切換帳號</a>・<a href="#" onclick="cloudLogout();return false">登出</a>`
     : `<a href="#" onclick="cloudSync('load');return false">以 Google 登入，同步個人模板</a>`;
 }
 function pickTpl(){
@@ -1067,52 +1064,113 @@ function delTpl(){
 }
 function msg(t,bad){ $('rptMsg').textContent=t; $('rptMsg').style.color=bad?'var(--bad)':'var(--ok)'; }
 
-/* ---------- Google 雲端（Apps Script，以使用者本人身分執行） ---------- */
-let SYNC=null;
-function cloudSync(action){
-  if(!TPL.gasUrl){
-    const u=prompt('請貼上「模板雲端同步」的 Apps Script 網址（https://script.google.com/macros/s/…/exec）：','');
-    if(!u) return;
-    if(!/^https:\/\/script\.google\.com\/(a\/[^/]+\/)?macros\/s\/[\w-]+\/exec/.test(u.trim())) return alert('網址格式不正確。');
-    TPL.gasUrl=u.trim(); tplStoreLocal();
-  }
-  const nonce=Math.random().toString(36).slice(2)+Date.now();
-  const w=window.open('','vanco_gsync','width=480,height=600');
-  if(!w) return msg('彈出視窗被瀏覽器封鎖，請允許後再試。',true);
-  const f=document.createElement('form');
-  f.method='POST'; f.action=TPL.gasUrl; f.target='vanco_gsync'; f.style.display='none';
-  const add=(k,v)=>{ const i=document.createElement('input'); i.type='hidden'; i.name=k; i.value=v; f.appendChild(i); };
-  add('action',action); add('nonce',nonce);
-  if(action==='save') add('data',JSON.stringify({list:TPL.list,sel:TPL.sel,ts:TPL.ts}));
-  document.body.appendChild(f); f.submit(); f.remove();
-  SYNC={nonce,win:w,action};
-  msg(action==='save'?'☁ 上傳中…（首次使用需在彈出視窗授權）':'☁ 連線 Google 中…（首次使用需在彈出視窗授權）');
+/* ---------- Google 雲端（Google 登入＋使用者雲端硬碟的應用程式專用資料夾） ---------- */
+const GCLIENT_ID='163103787242-mdkavbbnkl2fbnqfr8okltk5fabb9jvc.apps.googleusercontent.com';
+const GSCOPE='https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.email';
+const GFILE='vanco_templates.json';
+let GTOKEN=null, GEXP=0, GCLIENT=null, GPENDING=null;
+
+function gisLoad(){
+  return new Promise((res,rej)=>{
+    if(window.google&&google.accounts&&google.accounts.oauth2) return res();
+    const s=document.createElement('script'); s.src='https://accounts.google.com/gsi/client'; s.async=true;
+    s.onload=()=>res(); s.onerror=()=>rej(new Error('無法載入 Google 登入元件，請確認網路'));
+    document.head.appendChild(s);
+  });
 }
-addEventListener('message',e=>{
-  const d=e.data;
-  if(!d||d.type!=='vanco-sync'||!SYNC||d.nonce!==SYNC.nonce) return;
-  try{ SYNC.win.close(); }catch(_){}
-  const action=SYNC.action; SYNC=null;
-  if(!d.ok) return msg('☁ 同步失敗：'+(d.error||'未知錯誤'),true);
-  TPL.email=d.email||'(已登入)';
-  if(action==='load'){
-    let cloud=null; try{ cloud=d.data?JSON.parse(d.data):null; }catch(_){}
-    if(cloud && Array.isArray(cloud.list)){
-      if(TPL.list.length && JSON.stringify(TPL.list)!==JSON.stringify(cloud.list) && (TPL.ts||0)>(cloud.ts||0)
-         && confirm('本機的模板比雲端新，要上傳本機模板覆蓋雲端嗎？\n（取消＝改用雲端模板）')){
-        tplStoreLocal(); renderTplSel(); return cloudSync('save');
+/* 預先載入，點按鈕時才能立即跳出登入視窗（瀏覽器只允許使用者點擊當下開視窗） */
+if(location.protocol==='https:'||location.origin.startsWith('https:')) gisLoad().catch(()=>{});
+
+function gisClient(){
+  if(GCLIENT) return GCLIENT;
+  GCLIENT=google.accounts.oauth2.initTokenClient({
+    client_id:GCLIENT_ID, scope:GSCOPE,
+    callback:r=>{
+      const p=GPENDING; GPENDING=null;
+      if(r.error){ return p&&p.rej(new Error(r.error_description||r.error)); }
+      GTOKEN=r.access_token; GEXP=Date.now()+(r.expires_in-60)*1000;
+      p&&p.res();
+    },
+    error_callback:e=>{ const p=GPENDING; GPENDING=null; p&&p.rej(new Error(e.type==='popup_closed'?'已取消登入':(e.message||e.type))); },
+  });
+  return GCLIENT;
+}
+/* 必須在點擊事件中「同步」呼叫 */
+function gisToken(selectAccount){
+  if(!selectAccount && GTOKEN && Date.now()<GEXP) return Promise.resolve();
+  if(!(window.google&&google.accounts&&google.accounts.oauth2))
+    return Promise.reject(new Error(location.protocol==='file:'||location.origin==='null'
+      ? '請用網站網址開啟（本機檔案無法使用 Google 登入）' : 'Google 登入元件尚未載入，請稍候再按一次'));
+  return new Promise((res,rej)=>{
+    GPENDING={res,rej};
+    gisClient().requestAccessToken(selectAccount ? {prompt:'select_account'} : {prompt:'', login_hint:TPL.email||undefined});
+  });
+}
+async function gapi(url,opt={}){
+  const r=await fetch(url,Object.assign({},opt,{headers:Object.assign({Authorization:'Bearer '+GTOKEN},opt.headers||{})}));
+  if(r.status===401){ GTOKEN=null; throw new Error('登入已過期，請再按一次'); }
+  if(!r.ok) throw new Error('Google 回應錯誤 '+r.status+'：'+(await r.text()).slice(0,120));
+  return r;
+}
+async function driveFind(){
+  const q=encodeURIComponent(`name='${GFILE}' and trashed=false`);
+  const j=await (await gapi(`https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=${q}&fields=files(id)`)).json();
+  return j.files&&j.files[0]?j.files[0].id:null;
+}
+async function driveLoad(){
+  const id=await driveFind(); if(!id) return null;
+  return await (await gapi(`https://www.googleapis.com/drive/v3/files/${id}?alt=media`)).json();
+}
+async function driveSave(obj){
+  const body=JSON.stringify(obj), id=await driveFind();
+  if(id) return gapi(`https://www.googleapis.com/upload/drive/v3/files/${id}?uploadType=media`,
+                     {method:'PATCH',headers:{'Content-Type':'application/json'},body});
+  const b='abx'+Date.now();
+  const multi=`--${b}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n`
+    +JSON.stringify({name:GFILE,parents:['appDataFolder']})
+    +`\r\n--${b}\r\nContent-Type: application/json\r\n\r\n${body}\r\n--${b}--`;
+  return gapi('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',
+              {method:'POST',headers:{'Content-Type':'multipart/related; boundary='+b},body:multi});
+}
+
+/* action: 'load'＝登入並取回（會跳出選擇帳號）；'save'＝上傳目前模板 */
+function cloudSync(action){
+  const tk=gisToken(action==='load');          // 同步呼叫，保持在點擊事件內
+  msg(action==='load'?'☁ 請在彈出視窗選擇 Google 帳號…':'☁ 上傳中…');
+  tk.then(async()=>{
+    if(action==='load'){
+      const u=await (await gapi('https://www.googleapis.com/oauth2/v3/userinfo')).json();
+      const changed = TPL.email && u.email!==TPL.email;
+      TPL.email=u.email||'(已登入)';
+      const cloud=await driveLoad();
+      if(cloud && Array.isArray(cloud.list)){
+        if(!changed && TPL.list.length && JSON.stringify(TPL.list)!==JSON.stringify(cloud.list) && (TPL.ts||0)>(cloud.ts||0)
+           && confirm('本機的模板比雲端新，要上傳本機模板覆蓋雲端嗎？\n（取消＝改用雲端模板）')){
+          await driveSave({list:TPL.list,sel:TPL.sel,ts:TPL.ts});
+          msg('☁ 已上傳本機模板到雲端');
+        }else{
+          TPL.list=cloud.list; TPL.ts=cloud.ts||0;
+          TPL.sel=(cloud.sel>0&&cloud.sel<=TPL.list.length)?cloud.sel:0;
+          msg(`☁ 已載入雲端模板 ${TPL.list.length} 個`);
+        }
+      }else if(TPL.list.length && !changed){
+        await driveSave({list:TPL.list,sel:TPL.sel,ts:TPL.ts});
+        msg('☁ 雲端尚無模板，已上傳本機模板');
+      }else{
+        if(changed){ TPL.list=[]; TPL.sel=0; TPL.ts=0; }
+        msg('☁ 已登入，雲端尚無模板');
       }
-      TPL.list=cloud.list; TPL.ts=cloud.ts||0;
-      TPL.sel = (cloud.sel>0 && cloud.sel<=TPL.list.length) ? cloud.sel : 0;
-      msg(`☁ 已載入雲端模板 ${TPL.list.length} 個`);
-    }else if(TPL.list.length){
-      tplStoreLocal(); renderTplSel(); return cloudSync('save');      // 雲端還沒有 → 上傳本機
-    }else msg('☁ 已登入，雲端尚無模板');
-    tplStoreLocal(); renderTplSel(); regenReport(true);
-  }else{ tplStoreLocal(); renderTplSel(); msg('☁ 已儲存到 Google 雲端'); }
-});
+      tplStoreLocal(); renderTplSel(); regenReport(true);
+    }else{
+      await driveSave({list:TPL.list,sel:TPL.sel,ts:TPL.ts});
+      msg('☁ 已儲存到 Google 雲端');
+    }
+  }).catch(e=>msg('☁ '+e.message,true));
+}
 function cloudLogout(){
   if(!confirm('登出會清除這台電腦上的模板副本（雲端仍保留，下次登入即可取回）。確定登出？')) return;
+  try{ if(GTOKEN) google.accounts.oauth2.revoke(GTOKEN,()=>{}); }catch(e){}
+  GTOKEN=null; GEXP=0;
   TPL.email=''; TPL.list=[]; TPL.sel=0; TPL.ts=0; tplStoreLocal(); renderTplSel(); regenReport(true); msg('已登出');
 }
 
