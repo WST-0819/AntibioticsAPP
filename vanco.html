@@ -56,6 +56,7 @@ canvas{max-width:100%;width:100%}
 .i:hover,.i.on{background:var(--accent2);border-color:var(--accent2);color:#fff}
 #tip{position:fixed;z-index:999;display:none;max-width:320px;padding:9px 11px;border-radius:7px;background:#1f2933;color:#f1f5f9;font-size:12.5px;line-height:1.6;white-space:pre-line;box-shadow:0 6px 20px rgba(0,0,0,.18);pointer-events:none}
 .dt{display:flex;gap:6px}.dt input[type=date]{flex:1.4}.dt input[type=text]{flex:1}
+.nav.sub button{padding:6px 14px;font-size:13px}
 button.rpt{background:var(--ok)}
 #rptBox{position:fixed;inset:0;z-index:1000;display:none;align-items:center;justify-content:center;background:rgba(15,20,25,.55);padding:16px}
 #rptBox.on{display:flex}
@@ -122,6 +123,7 @@ button.rpt{background:var(--ok)}
   <button class="on" data-p="init">Initial Dosing</button>
   <button data-p="sst">Steady-State Trough</button>
   <button data-p="pt">Steady-State Peak &amp; Trough</button>
+  <button data-p="spec">特殊族群</button>
 </div>
 
 <!-- ============================ Initial Dosing ============================ -->
@@ -414,6 +416,110 @@ button.rpt{background:var(--ok)}
 <div class="card"><h2>給藥方案比較</h2><div class="scroll"><table class="cmp" id="cmp_pt"></table></div><div id="cmpNote_pt"></div></div>
 <div class="card"><h2>藥動模擬圖</h2><canvas id="chart_pt" height="260"></canvas></div>
 </div>
+
+<!-- ============================ 特殊族群 ============================ -->
+<div class="page" id="page-spec">
+<div class="nav sub" style="margin-bottom:12px">
+  <button class="on" data-g="kid">小兒</button>
+  <button data-g="hd">血液透析 HD</button>
+  <button data-g="capd">腹膜透析 CAPD</button>
+</div>
+
+<!-- ---------- 小兒 ---------- -->
+<div id="g-kid">
+<div class="card">
+  <h2>病人資料（小兒）</h2>
+  <div class="grid">
+    <div><label>年齡 (歲，可填小數，如 0.5)</label><input id="k_age" type="number" step="0.1"></div>
+    <div><label>性別</label><div class="radios">
+      <label><input type="radio" name="k_sex" value="M" checked>男</label>
+      <label><input type="radio" name="k_sex" value="F">女</label></div></div>
+    <div><label>身高 Length</label><div style="display:flex;gap:6px"><input id="k_ht" type="number" step="0.1"><span class="unit">cm</span></div></div>
+    <div><label>體重</label><div style="display:flex;gap:6px"><input id="k_wt" type="number" step="0.01"><span class="unit">kg</span></div></div>
+    <div><label>SCr（無資料請留空）</label><div style="display:flex;gap:6px"><input id="k_scr" type="number" step="0.01"><span class="unit">mg/dL</span></div></div>
+    <div id="k_preBox"><label>&lt;1 歲</label><div class="radios">
+      <label><input type="radio" name="k_pre" value="0" checked>足月</label>
+      <label><input type="radio" name="k_pre" value="1">早產兒</label></div></div>
+  </div>
+</div>
+<div class="card">
+  <h2>感染類型與劑量</h2>
+  <div class="grid">
+    <div><label>感染類型（目標 trough）</label>
+      <select id="k_goal"><option value="mild">UTI、SSTI（8–15 mg/L）</option><option value="sev">嚴重感染（15–20 mg/L）</option></select></div>
+    <div><label>劑量</label><div style="display:flex;gap:6px">
+      <select id="k_mgkg"><option>10</option><option>12.5</option><option selected>15</option></select><span class="unit">mg/kg/dose</span></div></div>
+  </div>
+  <div class="note">劑量 10–15 mg/kg/dose，嚴重感染建議 15 mg/kg；頻次依腎功能（Schwartz）決定。</div>
+</div>
+<div class="card">
+  <h2>腎功能與起始劑量</h2>
+  <div class="two"><div class="scroll"><table id="k_res"></table></div><div class="scroll"><table id="k_tbl"></table></div></div>
+  <div id="k_flag"></div><ul class="alerts" id="k_alert"></ul>
+</div>
+<div class="card">
+  <h2>劑量調整（依測得 trough）</h2>
+  <div class="grid">
+    <div><label>目前劑量</label><div style="display:flex;gap:6px"><input id="k_cdose" type="number" step="5"><span class="unit">mg</span></div></div>
+    <div><label>目前間隔</label><div style="display:flex;gap:6px"><select id="k_ctau"><option>6</option><option>8</option><option>12</option><option>24</option><option>48</option></select><span class="unit">hrs</span></div></div>
+    <div><label>測得 trough</label><div style="display:flex;gap:6px"><input id="k_ctr" type="number" step="0.1"><span class="unit">mg/L</span></div></div>
+  </div>
+  <div id="k_adj" style="margin-top:10px"></div>
+</div>
+</div>
+
+<!-- ---------- HD ---------- -->
+<div id="g-hd" style="display:none">
+<div class="card">
+  <h2>病人資料（血液透析）</h2>
+  <div class="grid">
+    <div><label>體重（乾體重）</label><div style="display:flex;gap:6px"><input id="d_wt" type="number" step="0.1"><span class="unit">kg</span></div></div>
+    <div><label>感染類型（洗腎前 trough 目標）</label>
+      <select id="d_goal"><option value="mild">UTI、SSTI（10–15 mg/L）</option><option value="sev" selected>嚴重感染（18.6–23 mg/L）</option></select></div>
+  </div>
+</div>
+<div class="card">
+  <h2>起始劑量</h2>
+  <div class="scroll"><table id="d_res"></table></div>
+  <ul class="alerts" id="d_alert"></ul>
+</div>
+<div class="card">
+  <h2>劑量調整（依洗腎前 trough 等比例校正）</h2>
+  <div class="grid">
+    <div><label>目前每次洗腎後劑量</label><div style="display:flex;gap:6px"><input id="d_cdose" type="number" step="50"><span class="unit">mg</span></div></div>
+    <div><label>測得洗腎前 trough</label><div style="display:flex;gap:6px"><input id="d_ctr" type="number" step="0.1"><span class="unit">mg/L</span></div></div>
+  </div>
+  <div id="d_adj" style="margin-top:10px"></div>
+</div>
+</div>
+
+<!-- ---------- CAPD ---------- -->
+<div id="g-capd" style="display:none">
+<div class="card">
+  <h2>病人資料（腹膜透析）</h2>
+  <div class="grid">
+    <div><label>體重</label><div style="display:flex;gap:6px"><input id="c_wt" type="number" step="0.1"><span class="unit">kg</span></div></div>
+    <div><label>每袋透析液容量</label><div style="display:flex;gap:6px"><input id="c_bag" type="number" step="0.5" value="2"><span class="unit">L</span></div></div>
+    <div><label>感染類型（trough 目標）</label>
+      <select id="c_goal"><option value="mild">UTI、SSTI（10–15 mg/L）</option><option value="sev" selected>嚴重感染（15–20 mg/L）</option></select></div>
+  </div>
+</div>
+<div class="card">
+  <h2>起始劑量</h2>
+  <div class="scroll"><table id="c_res"></table></div>
+  <ul class="alerts" id="c_alert"></ul>
+</div>
+<div class="card">
+  <h2>劑量調整（IV，依測得 trough 等比例校正）</h2>
+  <div class="grid">
+    <div><label>目前 IV 劑量（QOD）</label><div style="display:flex;gap:6px"><input id="c_cdose" type="number" step="50"><span class="unit">mg</span></div></div>
+    <div><label>測得 trough</label><div style="display:flex;gap:6px"><input id="c_ctr" type="number" step="0.1"><span class="unit">mg/L</span></div></div>
+  </div>
+  <div id="c_adj" style="margin-top:10px"></div>
+</div>
+</div>
+<div class="note">依據：本院 Vancomycin TDM 線上藥師操作版（2024.10.24）。計算結果僅供參考，請依臨床狀況調整。</div>
+</div>
 </div>
 
 <script>
@@ -474,8 +580,8 @@ function addTips(){
 })();
 
 let curPage='init';
-document.querySelectorAll('.nav button').forEach(b=>b.onclick=()=>{
-  document.querySelectorAll('.nav button').forEach(x=>x.classList.remove('on'));
+document.querySelectorAll('.nav:not(.sub) button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('.nav:not(.sub) button').forEach(x=>x.classList.remove('on'));
   document.querySelectorAll('.page').forEach(x=>x.classList.remove('on'));
   b.classList.add('on'); curPage=b.dataset.p; $('page-'+curPage).classList.add('on');
   run();
@@ -922,6 +1028,135 @@ function calc(){
   computed=true; Object.assign(S.init,{td:false,tt:false,auto:false});
   run();
 }
+
+/* ===== 特殊族群 ===== */
+const R250=x=>Math.round(x/250)*250, R50=x=>Math.round(x/50)*50, R5=x=>Math.round(x/5)*5;
+const fx=(x,d=0)=>isFinite(x)?Number(x).toFixed(d):'—';
+const vnum=id=>{const v=parseFloat($(id).value); return isFinite(v)?v:NaN;};
+let SPEC_G='kid';
+document.querySelectorAll('.nav.sub button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('.nav.sub button').forEach(x=>x.classList.toggle('on',x===b));
+  SPEC_G=b.dataset.g; ['kid','hd','capd'].forEach(g=>$('g-'+g).style.display=g===SPEC_G?'':'none');
+  specCalc();
+});
+/* 小兒 Schwartz K 值 */
+function kidK(age,sex,pre){
+  if(age<1) return pre ? 0.33 : 0.45;
+  if(age>12 && sex==='M') return 0.7;
+  return 0.55;
+}
+/* Ccr → 給藥間隔（>90 Q6H、66–89 Q8H、40–65 Q12H、20–39 Q24H、<20 Q48H；以整數比較） */
+function kidTau(ccr){
+  const c=Math.round(ccr);
+  return c>90?6 : c>=66?8 : c>=40?12 : c>=20?24 : 48;
+}
+const KID_TAU_ROWS=[['>90','Q6H',6],['66–89','Q8H',8],['40–65','Q12H',12],['20–39','Q24H',24],['<20','Q48H',48]];
+function specKid(){
+  const age=vnum('k_age'), wt=vnum('k_wt'), ht=vnum('k_ht'), scr=vnum('k_scr');
+  const sex=document.querySelector('input[name=k_sex]:checked').value;
+  const pre=document.querySelector('input[name=k_pre]:checked').value==='1';
+  $('k_preBox').style.display = (isFinite(age)&&age<1) ? '' : 'none';
+  const mgkg=parseFloat($('k_mgkg').value), sev=$('k_goal').value==='sev';
+  const al=[]; let rows=[], tau=NaN, ccr=NaN, K=NaN;
+  if(!(wt>0)){ $('k_res').innerHTML=''; $('k_tbl').innerHTML=''; $('k_flag').innerHTML='<div class="note" style="color:var(--warn)">請輸入體重。</div>'; alerts('k_alert',[]); specKidAdj(NaN); return; }
+  if(isFinite(age)&&age>=18) al.push('年齡 ≥18 歲，請改用成人 Initial Dosing。');
+  const noScr=!(scr>0);
+  if(noScr){
+    tau=6; al.push('無 SCr 資料：起始劑量依 10–15 mg/kg Q6H 給予，再依抽出的 trough 調整。');
+  }else{
+    if(!(isFinite(age)&&age>=0)) { $('k_flag').innerHTML='<div class="note" style="color:var(--warn)">請輸入年齡（計算 Schwartz K 值）。</div>'; }
+    if(!(ht>0)) { $('k_flag').innerHTML='<div class="note" style="color:var(--warn)">請輸入身高（Schwartz 公式需要）。</div>'; }
+    if(isFinite(age)&&age>=0&&ht>0){
+      K=kidK(age,sex,pre); ccr=K*ht/scr; tau=kidTau(ccr); $('k_flag').innerHTML='';
+    }
+  }
+  const lo=10*wt, hi=15*wt, dose=mgkg*wt;
+  rows.push(['§腎功能（Schwartz：Ccr = K × L ÷ SCr）']);
+  rows.push(['K 值', isFinite(K)?K:(noScr?'—（無 SCr）':'—'), isFinite(K)?(age<1?(pre?'早產兒 <1 歲':'足月 <1 歲'):(age>12&&sex==='M'?'>12 歲男':'1–12 歲或 >12 歲女')):'']);
+  rows.push(['Ccr', fx(ccr,0), 'mL/min/1.73m²']);
+  rows.push(['§起始劑量']);
+  rows.push(['劑量範圍（10–15 mg/kg）', `${fx(lo,0)}–${fx(hi,0)}`, 'mg/dose']);
+  rows.push([`建議劑量（${mgkg} mg/kg）`, fx(R5(dose),0), 'mg/dose（取 5 mg）']);
+  rows.push(['給藥間隔', isFinite(tau)?`Q${tau}H`:'—', '']);
+  if(isFinite(tau)) rows.push(['每日劑量', fx(R5(dose)*24/tau,0), 'mg/day']);
+  rows.push(['目標 trough', sev?'15–20':'8–15', 'mg/L']);
+  tbl('k_res',rows.map(r=>r.length===1?[r[0]]:r));
+  $('k_tbl').innerHTML='<tr><th>Ccr (mL/min/1.73m²)</th><th>給藥間隔</th></tr>'+
+    KID_TAU_ROWS.map(([c,t,h])=>`<tr${h===tau&&!noScr?' style="background:var(--okbg);font-weight:600"':''}><td>${c}</td><td>${t}</td></tr>`).join('');
+  if(sev) al.push('嚴重感染 trough 目標建議接近 15，較能減少腎毒性，可依臨床狀況調升劑量。');
+  al.push('小兒 Ccr 請以 Schwartz 公式計算，勿參考個案紀錄中的 Ccr。');
+  al.push('抽血：給藥 4–5 個 dose 後，於給藥前抽 trough（小兒半衰期短，不受全院 08:00–09:00 規範）。');
+  alerts('k_alert',al);
+  specKidAdj(tau);
+}
+/* 小兒調整（依測得 trough；臺大醫院臨床藥事照護手冊） */
+function specKidAdj(){
+  const d=vnum('k_cdose'), t=parseFloat($('k_ctau').value), tr=vnum('k_ctr');
+  if(!(d>0&&tr>=0&&$('k_ctr').value!=='')){ $('k_adj').innerHTML='<div class="note">輸入目前劑量與測得 trough 後顯示建議。</div>'; return; }
+  const shorter={8:6,12:8,24:12,48:24}[t], longer={6:8,8:12,12:24,24:48}[t];
+  const up=R5(d*1.25), dn=R5(d*0.75), up3=R5(d*4/3);
+  let h='';
+  if(tr<5) h = t===6 ? `原本即 Q6H → 增加 1/3 劑量：<b>${up3} mg Q6H</b>`
+                    : `縮短給藥間隔：<b>${d} mg Q${shorter}H</b>（Q${t}H → Q${shorter}H）`;
+  else if(tr<8) h = `縮短給藥間隔：<b>${d} mg Q${shorter||t}H</b>，或增加 25% 劑量：<b>${up} mg Q${t}H</b>`;
+  else if(tr<=15) h = `在目標範圍。若需上升濃度：增加 25% 劑量 <b>${up} mg Q${t}H</b>，或縮短間隔 <b>${d} mg Q${shorter||t}H</b>`;
+  else if(tr<=20) h = `若需下降濃度：調降 25% 劑量 <b>${dn} mg Q${t}H</b>，或延長間隔 <b>${d} mg Q${longer||t}H</b>`;
+  else if(tr<=30) h = `停 1 個 dose，並調降 25% 劑量 <b>${dn} mg Q${t}H</b>，或延長間隔 <b>${d} mg Q${longer||t}H</b>`;
+  else h = `trough &gt;30 mg/L：文件未列出建議，請停藥並個別評估。`;
+  if(tr>20) h += '<br><span style="color:var(--bad)">危急值（非 HD 病人 trough &gt;20 mg/L）</span>';
+  $('k_adj').innerHTML=`<div class="flag ${tr<8?'f-warn':tr<=20?'f-ok':'f-bad'}">測得 trough ${tr} mg/L：${h}</div>`;
+}
+/* 透析病人負荷劑量（20–25 mg/kg ST，max 3 g，以 250 mg 為單位） */
+function ldRows(wt){
+  const lo=Math.min(20*wt,3000), hi=Math.min(25*wt,3000);
+  return [['負荷劑量（20–25 mg/kg ST，max 3 g）',`${R250(lo)}–${R250(hi)}`,'mg（以 250 mg 為單位）']];
+}
+function propAdj(el,dose,tr,lo,hi,unitNote,crit){
+  if(!(dose>0&&tr>0)){ $(el).innerHTML='<div class="note">輸入目前劑量與測得 trough 後顯示建議。</div>'; return; }
+  const mid=(lo+hi)/2, nd=dose*mid/tr;
+  const st = tr<lo?'f-warn' : tr>hi?'f-bad':'f-ok';
+  $(el).innerHTML=`<div class="flag ${st}">測得 ${tr} mg/L（目標 ${lo}–${hi}）→ 新劑量 = 目前劑量 × 理想濃度 ÷ 測得濃度 = ${dose} × ${mid} ÷ ${tr} = <b>${R50(nd)} mg</b> ${unitNote}</div>`
+    +(tr>crit?`<div class="note" style="color:var(--bad)">危急值（trough &gt;${crit} mg/L）：預計下次給藥時濃度應落在 10–20 mg/L，請評估停藥時間。</div>`:'');
+}
+function specHD(){
+  const wt=vnum('d_wt'), sev=$('d_goal').value==='sev', lo=sev?18.6:10, hi=sev?23:15;
+  if(!(wt>0)){ $('d_res').innerHTML=''; alerts('d_alert',['請輸入體重。']); }
+  else{
+    tbl('d_res',[['§起始劑量'],...ldRows(wt),
+      ['維持劑量（7.5–10 mg/kg）',`${R50(7.5*wt)}–${R50(10*wt)}`,'mg，每次洗腎後給（以 50 mg 為單位）'],
+      ['目標洗腎前 trough',`${lo}–${hi}`,'mg/L']].map(r=>r.length===1?[r[0]]:r));
+    alerts('d_alert',[
+      '接受透析的病人一定要給 loading dose。',
+      sev?'嚴重感染 HD 病人目標 pre-dialysis trough 18.6–23 mg/L；>23 mg/L 需調降劑量。':'',
+      '抽血：給 2–3 個 maintenance dose 後（約一週），於洗腎前只抽 trough。',
+      '抽血時間須為洗腎前或洗腎剛開始（1 小時內），否則請護理站下次洗腎前重抽。']);
+  }
+  propAdj('d_adj',vnum('d_cdose'),vnum('d_ctr'),lo,hi,'每次洗腎後',23);
+}
+function specCAPD(){
+  const wt=vnum('c_wt'), bag=vnum('c_bag'), sev=$('c_goal').value==='sev', lo=sev?15:10, hi=sev?20:15;
+  if(!(wt>0)){ $('c_res').innerHTML=''; alerts('c_alert',['請輸入體重。']); }
+  else{
+    tbl('c_res',[['§起始劑量'],...ldRows(wt),
+      ['IP（腹腔給藥）25 mg/L',bag>0?fx(25*bag,0):'—',`mg／每袋（${bag||'—'} L），每包透析液都要加`],
+      ['IV 維持（7.5 mg/kg QOD）',fx(R50(7.5*wt),0),'mg QOD（以 50 mg 為單位）'],
+      ['目標 trough',`${lo}–${hi}`,'mg/L']].map(r=>r.length===1?[r[0]]:r));
+    alerts('c_alert',['抽血：初次給藥日期 +4 天的給藥前，只抽 trough。']);
+  }
+  propAdj('c_adj',vnum('c_cdose'),vnum('c_ctr'),lo,hi,'QOD',20);
+}
+function specCalc(){ try{ ({kid:specKid,hd:specHD,capd:specCAPD})[SPEC_G](); }catch(e){ console.error(e); } }
+/* 預帶：特殊族群欄位空白時，從 Initial Dosing 的病人資料帶入 */
+function specPrefill(){
+  const cp=(from,to)=>{ if($(to)&&$(to).value===''&&$(from)&&$(from).value!=='') $(to).value=$(from).value; };
+  cp('age','k_age'); cp('ht','k_ht'); cp('wt','k_wt'); cp('scr','k_scr'); cp('wt','d_wt'); cp('wt','c_wt');
+  const s=document.querySelector('input[name=sex]:checked'), ks=s&&document.querySelector(`input[name=k_sex][value=${s.value}]`);
+  if(ks && !specPrefill.done) ks.checked=true;
+  specPrefill.done=true;
+}
+document.querySelector('.nav button[data-p=spec]').addEventListener('click',()=>{ specPrefill(); specCalc(); });
+$('page-spec').addEventListener('input',specCalc);
+$('page-spec').addEventListener('change',specCalc);
 
 /* ===== 產出建議（罐頭訊息）＋ 個人模板 ===== */
 let RPT_CTX='init';
