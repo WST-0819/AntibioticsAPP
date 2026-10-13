@@ -447,9 +447,9 @@ button.rpt{background:var(--ok)}
     <div><label>感染類型（目標 trough）</label>
       <select id="k_goal"><option value="mild">UTI、SSTI（8–15 mg/L）</option><option value="sev">嚴重感染（15–20 mg/L）</option></select></div>
     <div><label>劑量</label><div style="display:flex;gap:6px">
-      <select id="k_mgkg"><option>10</option></select><span class="unit">mg/kg/dose</span></div></div>
+      <input id="k_mgkg" type="number" step="0.5" value="10"><span class="unit">mg/kg/dose</span></div></div>
   </div>
-  <div class="note">輕微感染統一 10 mg/kg/dose；嚴重感染可選 10 或 15 mg/kg/dose（建議 15）。頻次依腎功能（Schwartz）決定。</div>
+  <div class="note">依感染類型預帶：輕微感染 10 mg/kg/dose、嚴重感染 15 mg/kg/dose，可自行修改。頻次依腎功能（Schwartz）決定。</div>
 </div>
 <div class="card">
   <h2>腎功能與起始劑量</h2>
@@ -1031,12 +1031,13 @@ function specKid(){
   const pre=document.querySelector('input[name=k_pre]:checked').value==='1';
   $('k_preBox').style.display = (isFinite(age)&&age<1) ? '' : 'none';
   const sev=$('k_goal').value==='sev', sel=$('k_mgkg');
-  if(sel.dataset.g!==String(sev)){            // 感染類型改變時重設劑量選項
-    sel.innerHTML = sev ? '<option>10</option><option selected>15</option>' : '<option>10</option>';
-    sel.disabled=!sev; sel.dataset.g=String(sev);
+  if(sel.dataset.g!==String(sev)){            // 感染類型改變時預帶劑量（可再自行修改）
+    sel.value = sev ? 15 : 10; sel.dataset.g=String(sev);
   }
   const mgkg=parseFloat(sel.value);
+  if(!(mgkg>0)){ tbl('k_res',[]); $('k_flag').innerHTML='<div class="note" style="color:var(--warn)">請輸入劑量 mg/kg。</div>'; return; }
   const al=[]; let rows=[], tau=NaN, ccr=NaN, K=NaN;
+  if(mgkg>15) al.push(`劑量 ${mgkg} mg/kg 超過手冊建議的 10–15 mg/kg。`);
   if(!(wt>0)){ $('k_res').innerHTML=''; $('k_tbl').innerHTML=''; $('k_flag').innerHTML='<div class="note" style="color:var(--warn)">請輸入體重。</div>'; alerts('k_alert',[]); specKidAdj(NaN); return; }
   if(isFinite(age)&&age>=18) al.push('年齡 ≥18 歲，請改用成人 Initial Dosing。');
   const noScr=!(scr>0);
