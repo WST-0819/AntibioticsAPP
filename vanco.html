@@ -1287,7 +1287,14 @@ function msg(t,bad){ $('rptMsg').textContent=t; $('rptMsg').style.color=bad?'var
 
 /* ---------- Google 登入（Firebase Authentication）＋使用者雲端硬碟的應用程式專用資料夾 ---------- */
 /* Firebase 專案設定：請貼上 Firebase 主控台「專案設定 → 您的應用程式 → SDK 設定」中的 firebaseConfig */
-const FB_CONFIG=null;
+const FB_CONFIG={
+  apiKey:"AIzaSyA4ox6e_7fbou60camK2bUy_xkddYiKgRY",
+  authDomain:"antibioticsapp-21b73.firebaseapp.com",
+  projectId:"antibioticsapp-21b73",
+  storageBucket:"antibioticsapp-21b73.firebasestorage.app",
+  messagingSenderId:"934108293992",
+  appId:"1:934108293992:web:12457d1cb5110e314a84dd",
+};
 const GSCOPE_DRIVE='https://www.googleapis.com/auth/drive.appdata';
 const GFILE='vanco_templates.json';
 const FB_VER='10.14.1';
