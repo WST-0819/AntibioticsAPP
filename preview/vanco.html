@@ -1298,7 +1298,8 @@ const FB_CONFIG={
 const GSCOPE_DRIVE='https://www.googleapis.com/auth/drive.appdata';
 const GFILE='vanco_templates.json';
 const FB_VER='10.14.1';
-let GTOKEN=null, GEXP=0, FBAUTH=null;
+let GTOKEN=null, GEXP=0, FBAUTH=null, NEED_CONSENT=false;
+const SCOPE_MSG='登入時沒有勾選雲端硬碟權限。請再按一次登入，在 Google 畫面勾選「查看、建立及刪除自身在 Google 雲端硬碟中的設定資料」（或類似文字）後按「繼續」。';
 
 function fbLoad(){
   if(FBAUTH) return Promise.resolve(FBAUTH);
@@ -1333,16 +1334,26 @@ function gisToken(selectAccount){
   if(!FBAUTH) return fbLoad().then(()=>{ throw new Error('登入元件剛載入完成，請再按一次'); });
   const p=new firebase.auth.GoogleAuthProvider();
   p.addScope(GSCOPE_DRIVE);
-  p.setCustomParameters(selectAccount||!TPL.email ? {prompt:'select_account'} : {login_hint:TPL.email});
-  return FBAUTH.signInWithPopup(p).then(r=>{
+  p.setCustomParameters(NEED_CONSENT ? {prompt:'consent select_account'}
+    : selectAccount||!TPL.email ? {prompt:'select_account'} : {login_hint:TPL.email});
+  return FBAUTH.signInWithPopup(p).then(async r=>{
     if(!r.credential||!r.credential.accessToken) throw new Error('未取得雲端硬碟權限，請重新登入並允許存取');
-    GTOKEN=r.credential.accessToken; GEXP=Date.now()+50*60*1000;
     if(r.user&&r.user.email) TPL.email=r.user.email;
-  }).catch(e=>{ throw new Error(FB_ERR[e.code]||('登入失敗：'+(e.code||e.message))); });
+    /* 確認使用者有勾選雲端硬碟權限（Google 授權畫面可個別取消勾選） */
+    let ok=true;
+    try{
+      const ti=await (await fetch('https://oauth2.googleapis.com/tokeninfo?access_token='+encodeURIComponent(r.credential.accessToken))).json();
+      ok=String(ti.scope||'').split(' ').includes(GSCOPE_DRIVE);
+    }catch(_){}
+    if(!ok){ NEED_CONSENT=true; throw new Error(SCOPE_MSG); }
+    NEED_CONSENT=false;
+    GTOKEN=r.credential.accessToken; GEXP=Date.now()+50*60*1000;
+  }).catch(e=>{ if(e.message===SCOPE_MSG) throw e; throw new Error(FB_ERR[e.code]||('登入失敗：'+(e.code||e.message))); });
 }
 async function gapi(url,opt={}){
   const r=await fetch(url,Object.assign({},opt,{headers:Object.assign({Authorization:'Bearer '+GTOKEN},opt.headers||{})}));
   if(r.status===401){ GTOKEN=null; throw new Error('登入已過期，請再按一次'); }
+  if(r.status===403 && /insufficient.*scope/i.test(await r.clone().text())){ GTOKEN=null; NEED_CONSENT=true; throw new Error(SCOPE_MSG); }
   if(!r.ok) throw new Error('Google 回應錯誤 '+r.status+'：'+(await r.text()).slice(0,120));
   return r;
 }
