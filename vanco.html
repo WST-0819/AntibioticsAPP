@@ -1285,47 +1285,53 @@ function delTpl(){
 }
 function msg(t,bad){ $('rptMsg').textContent=t; $('rptMsg').style.color=bad?'var(--bad)':'var(--ok)'; }
 
-/* ---------- Google 雲端（Google 登入＋使用者雲端硬碟的應用程式專用資料夾） ---------- */
-const GCLIENT_ID='163103787242-mdkavbbnkl2fbnqfr8okltk5fabb9jvc.apps.googleusercontent.com';
-const GSCOPE='https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.email';
+/* ---------- Google 登入（Firebase Authentication）＋使用者雲端硬碟的應用程式專用資料夾 ---------- */
+/* Firebase 專案設定：請貼上 Firebase 主控台「專案設定 → 您的應用程式 → SDK 設定」中的 firebaseConfig */
+const FB_CONFIG=null;
+const GSCOPE_DRIVE='https://www.googleapis.com/auth/drive.appdata';
 const GFILE='vanco_templates.json';
-let GTOKEN=null, GEXP=0, GCLIENT=null, GPENDING=null;
+const FB_VER='10.14.1';
+let GTOKEN=null, GEXP=0, FBAUTH=null;
 
-function gisLoad(){
-  return new Promise((res,rej)=>{
-    if(window.google&&google.accounts&&google.accounts.oauth2) return res();
-    const s=document.createElement('script'); s.src='https://accounts.google.com/gsi/client'; s.async=true;
-    s.onload=()=>res(); s.onerror=()=>rej(new Error('無法載入 Google 登入元件，請確認網路'));
-    document.head.appendChild(s);
-  });
+function fbLoad(){
+  if(FBAUTH) return Promise.resolve(FBAUTH);
+  if(!FB_CONFIG) return Promise.reject(new Error('尚未設定 Firebase（FB_CONFIG）'));
+  const add=src=>new Promise((res,rej)=>{ const s=document.createElement('script'); s.src=src;
+    s.onload=res; s.onerror=()=>rej(new Error('無法載入 Firebase 登入元件，請確認網路')); document.head.appendChild(s); });
+  return (window.firebase&&firebase.auth ? Promise.resolve()
+    : add(`https://www.gstatic.com/firebasejs/${FB_VER}/firebase-app-compat.js`)
+        .then(()=>add(`https://www.gstatic.com/firebasejs/${FB_VER}/firebase-auth-compat.js`)))
+    .then(()=>{
+      if(!firebase.apps.length) firebase.initializeApp(FB_CONFIG);
+      FBAUTH=firebase.auth(); FBAUTH.useDeviceLanguage();
+      return FBAUTH;
+    });
 }
-/* 預先載入，點按鈕時才能立即跳出登入視窗（瀏覽器只允許使用者點擊當下開視窗） */
-if(location.protocol==='https:'||location.origin.startsWith('https:')) gisLoad().catch(()=>{});
+/* 預先載入，點按鈕當下才能立即開出登入視窗 */
+if(location.protocol==='https:') fbLoad().catch(()=>{});
 
-function gisClient(){
-  if(GCLIENT) return GCLIENT;
-  GCLIENT=google.accounts.oauth2.initTokenClient({
-    client_id:GCLIENT_ID, scope:GSCOPE,
-    callback:r=>{
-      const p=GPENDING; GPENDING=null;
-      if(r.error){ return p&&p.rej(new Error(r.error_description||r.error)); }
-      GTOKEN=r.access_token; GEXP=Date.now()+(r.expires_in-60)*1000;
-      p&&p.res();
-    },
-    error_callback:e=>{ const p=GPENDING; GPENDING=null; p&&p.rej(new Error(e.type==='popup_closed'?'已取消登入':(e.message||e.type))); },
-  });
-  return GCLIENT;
-}
-/* 必須在點擊事件中「同步」呼叫 */
+const FB_ERR={
+  'auth/popup-closed-by-user':'已取消登入',
+  'auth/cancelled-popup-request':'已取消登入',
+  'auth/popup-blocked':'登入視窗被瀏覽器封鎖，請允許彈出視窗後再試',
+  'auth/unauthorized-domain':'此網址尚未加入 Firebase 的「已授權網域」',
+  'auth/network-request-failed':'網路連線失敗，請稍後再試',
+  'auth/operation-not-supported-in-this-environment':'請用網站網址開啟（本機檔案無法使用 Google 登入）',
+  'auth/internal-error':'Google 登入暫時發生錯誤，請再按一次',
+};
+/* 必須在點擊事件中「同步」呼叫（瀏覽器只允許點擊當下開視窗） */
 function gisToken(selectAccount){
   if(!selectAccount && GTOKEN && Date.now()<GEXP) return Promise.resolve();
-  if(!(window.google&&google.accounts&&google.accounts.oauth2))
-    return Promise.reject(new Error(location.protocol==='file:'||location.origin==='null'
-      ? '請用網站網址開啟（本機檔案無法使用 Google 登入）' : 'Google 登入元件尚未載入，請稍候再按一次'));
-  return new Promise((res,rej)=>{
-    GPENDING={res,rej};
-    gisClient().requestAccessToken(selectAccount ? {prompt:'select_account'} : {prompt:'', login_hint:TPL.email||undefined});
-  });
+  if(location.protocol==='file:') return Promise.reject(new Error(FB_ERR['auth/operation-not-supported-in-this-environment']));
+  if(!FBAUTH) return fbLoad().then(()=>{ throw new Error('登入元件剛載入完成，請再按一次'); });
+  const p=new firebase.auth.GoogleAuthProvider();
+  p.addScope(GSCOPE_DRIVE);
+  p.setCustomParameters(selectAccount||!TPL.email ? {prompt:'select_account'} : {login_hint:TPL.email});
+  return FBAUTH.signInWithPopup(p).then(r=>{
+    if(!r.credential||!r.credential.accessToken) throw new Error('未取得雲端硬碟權限，請重新登入並允許存取');
+    GTOKEN=r.credential.accessToken; GEXP=Date.now()+50*60*1000;
+    if(r.user&&r.user.email) TPL.email=r.user.email;
+  }).catch(e=>{ throw new Error(FB_ERR[e.code]||('登入失敗：'+(e.code||e.message))); });
 }
 async function gapi(url,opt={}){
   const r=await fetch(url,Object.assign({},opt,{headers:Object.assign({Authorization:'Bearer '+GTOKEN},opt.headers||{})}));
@@ -1356,13 +1362,14 @@ async function driveSave(obj){
 
 /* action: 'load'＝登入並取回（會跳出選擇帳號）；'save'＝上傳目前模板 */
 function cloudSync(action){
+  const prevEmail=TPL.email;
   const tk=gisToken(action==='load');          // 同步呼叫，保持在點擊事件內
   msg(action==='load'?'☁ 請在彈出視窗選擇 Google 帳號…':'☁ 上傳中…');
   tk.then(async()=>{
     if(action==='load'){
-      const u=await (await gapi('https://www.googleapis.com/oauth2/v3/userinfo')).json();
-      const changed = TPL.email && u.email!==TPL.email;
-      TPL.email=u.email||'(已登入)';
+      const now=(FBAUTH.currentUser&&FBAUTH.currentUser.email)||TPL.email||'(已登入)';
+      const changed = !!prevEmail && now!==prevEmail;
+      TPL.email=now;
       const cloud=await driveLoad();
       if(cloud && Array.isArray(cloud.list)){
         if(!changed && TPL.list.length && JSON.stringify(TPL.list)!==JSON.stringify(cloud.list) && (TPL.ts||0)>(cloud.ts||0)
@@ -1390,7 +1397,7 @@ function cloudSync(action){
 }
 function cloudLogout(){
   if(!confirm('登出會清除這台電腦上的模板副本（雲端仍保留，下次登入即可取回）。確定登出？')) return;
-  try{ if(GTOKEN) google.accounts.oauth2.revoke(GTOKEN,()=>{}); }catch(e){}
+  try{ if(FBAUTH) FBAUTH.signOut(); }catch(e){}
   GTOKEN=null; GEXP=0;
   TPL.email=''; TPL.list=[]; TPL.sel=0; TPL.ts=0; tplStoreLocal(); renderTplSel(); regenReport(true); msg('已登出');
 }
