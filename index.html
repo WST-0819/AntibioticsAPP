@@ -237,6 +237,30 @@
     .dsec .dh{font-size:12px}
   }
 
+
+  /* ===== 個人化建議：精簡卡片 + 右側依據 ===== */
+  .drug.pt{container-type:inline-size}
+  .prow{display:flex;gap:12px;align-items:flex-start;justify-content:space-between;padding-bottom:0}
+  .whybtn{flex:none;font-size:12.5px;font-weight:700;color:var(--accent);background:var(--accent-soft);
+    border:0;border-radius:8px;padding:6px 11px;cursor:pointer;white-space:nowrap}
+  .pbody{display:grid;grid-template-columns:1fr;align-items:start}
+  .pside{display:none;padding:0 16px 4px}
+  .drug.pt.open .pside{display:block}
+  .drug.pt .concl{margin:10px 16px 14px;padding:10px 14px}
+  .drug.pt details.det{margin:10px 0 12px}
+  .drug.pt .disc{margin:0}
+  @container (min-width:820px){
+    .drug.pt.open .pbody{grid-template-columns:minmax(260px,.8fr) 1.4fr}
+    .drug.pt.open .pside{padding:10px 16px 4px 0;max-height:70vh;overflow:auto}
+    .drug.pt.open .pmain{position:sticky;top:0}
+  }
+  .dl{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;align-items:baseline}
+  .dlk{font-size:12px;font-weight:700;color:var(--hit-text);opacity:.75;white-space:nowrap}
+  .dlv{font-size:17px;font-weight:800;line-height:1.4;color:var(--hit-text);white-space:pre-line;word-break:break-word}
+  .concl.amb .dlk,.concl.amb .dlv{color:var(--warn-text)}
+  .drug.pt .cbase{margin-top:6px;font-size:11.5px}
+  .cflag{margin-top:8px;font-size:12px;font-weight:700;color:var(--alert-text)}
+  @media (max-width:560px){.drug.pt .concl{margin:10px}.pside{padding:0 10px 4px}.dlv{font-size:15.5px}}
   /* ===== 額外功能按鈕 / 彈出視窗 ===== */
   .xbtn{display:inline-flex;align-items:center;gap:5px;margin-top:6px;font-size:12px;
     padding:5px 11px;border-radius:99px;border:1px solid var(--accent);
@@ -1347,19 +1371,33 @@ function doseTable(rows, cls){
       <td class="srccol">${srcCell(x.src)}</td></tr>`).join("") + `</tbody></table>`;
 }
 
+// 精簡版最終劑量：只列有值的項目，不顯示來源欄
+function doseLines(rows){
+  rows = (rows || []).filter(x => !x.none && x.v && x.v !== "—");
+  if (!rows.length) return `<div class="cdose">—</div>`;
+  return `<div class="dl">` + rows.map(x =>
+    `<div class="dlk">${esc(x.k)}</div><div class="dlv">${esc(x.v)}</div>`).join("") + `</div>`;
+}
+const PT_OPEN = new Set();
+function ptToggle(btn){
+  const d = btn.closest(".drug"), k = d.dataset.k, on = d.classList.toggle("open");
+  on ? PT_OPEN.add(k) : PT_OPEN.delete(k);
+  btn.textContent = on ? "收合依據 ◂" : "查看依據 ▸";
+  if (on && getComputedStyle(d.querySelector(".pbody")).gridTemplateColumns.split(" ").length < 2)
+    d.querySelector(".pside").scrollIntoView({behavior:"smooth", block:"nearest"});
+}
 function conclusion(r, s){
   const p = calc(), acts = activeTraits();
   if (!s.base && !s.modifiers.length){
     const hepT0 = TRAITS.find(t => t.key === "hep");
     const hepTxt = hepT0 && availOK(hepT0) ? traitCols(hepT0).map(c => cell(r[c])).filter(Boolean).join("\n") : "";
-    return `<div class="concl non">${hepTxt ? `<div class="ck">肝功能（共通資訊）</div><div class="cbase" style="white-space:pre-line;color:var(--text)">${esc(hepTxt)}</div><div class="ck2"></div>` : ""}<div class="ck">綜合結論</div>
-      <div class="cdose">此藥在表中沒有可對應目前病人條件的劑量資料</div>
-      <div class="cbase">請改用下方分頁的總表自行判讀。</div></div>`;
+    return {main:`<div class="concl non"><div class="cdose">表中無可對應目前病人條件的劑量資料</div></div>`,
+      side: `<div class="cmiss" style="margin-top:0">請改用下方分頁的總表自行判讀。</div>` + (hepTxt ? `<div class="ck2" style="margin-top:0">肝功能（共通資訊）</div><div class="cmiss" style="margin-top:0;white-space:pre-line;color:var(--text)">${esc(hepTxt)}</div>` : "")};
   }
   const amb = s.conflicts.length > 0 || !s.base || s.baseNeedsCheck;
   const main = s.base
-    ? doseTable(s.base.rows, "main") + `<div class="cbase">依據：${esc(s.baseVia)}</div>`
-    : `<div class="cdose">無法判定基礎劑量</div><div class="cbase">未比中族群條件，且表中無可用的一般劑量欄。</div>`;
+    ? doseLines(s.base.rows)
+    : `<div class="cdose">無法判定基礎劑量</div>`;
 
   // 判讀依據表：特性 / 判定 / 原文 / 來源
   const why = [];
@@ -1384,7 +1422,7 @@ function conclusion(r, s){
     const v = cell(r[c]); if (!v) return;
     why.push({t:"肝功能", k:"共通資訊", v:(HEAD[c] && !/肝功能/.test(HEAD[c]) ? HEAD[c] + "：" : "") + v, src:srcFor(c, r)});
   });
-  const whyTable = why.length ? `<div class="ck2">判讀依據</div>
+  const whyTable = why.length ? `<div class="ck2" style="margin-top:0">判讀依據</div>
     <table class="ctab why"><thead><tr><th style="width:96px">特性</th><th style="width:74px">判定</th>
       <th>依據原文</th><th class="srccol" style="width:120px">建議欄位來源</th></tr></thead><tbody>` +
     why.map(x => `<tr class="${x.cls === "none" ? "dimrow" : ""}"><td class="kk">${esc(x.t)}</td>
@@ -1407,8 +1445,9 @@ function conclusion(r, s){
     const b1 = nocol.length ? `${nocol.map(m => m.trait.label).join("、")}：此藥表中無對應族群資料。` : "";
     notes.push(`<div class="cmiss">${esc(a1)}${a1 && b1 ? " " : ""}${esc(b1)}</div>`);
   }
-  return `<div class="concl${amb ? " amb" : ""}"><div class="ck">綜合結論（符合 ${acts.length} 項特性）</div>
-    ${main}${whyTable}${notes.join("")}</div>`;
+  const via = s.base ? `<div class="cmiss" style="margin-top:0;margin-bottom:10px">採用：${esc(s.baseVia)}</div>` : `<div class="cmiss" style="margin-top:0;margin-bottom:10px">未比中族群條件，且表中無可用的一般劑量欄。</div>`;
+  return {main:`<div class="concl${amb ? " amb" : ""}">${main}</div>`,
+          side:via + whyTable + notes.join("")};
 }
 
 function detailBlock(r, s){
@@ -1448,15 +1487,17 @@ function personal(rows, terms){
   if (!q) return `<p class="hint">依 <b>${esc(ptLine())}</b> 比對。</p>
     <div class="empty">請在上方搜尋框輸入藥品名稱或成分，即會顯示該藥的個人化劑量建議。</div>`;
   const list = rows;
-  const head = `<p class="hint">依 <b>${esc(ptLine())}</b> 比對；結論為各項特性條件的整合，<span style="color:var(--hit-line);font-weight:700">綠色 ✓</span> 為符合的原文片段。</p>`;
+  const head = `<p class="hint">依 <b>${esc(ptLine())}</b> 比對。</p>`;
 
   return head + list.map(r => {
-    const s = synth(r);
-    return `<div class="drug"><div class="dhead">
-      <div class="dn" style="font-size:16px">${hl(r[0], terms)}${r[2] ? `<span class="rt">${esc(r[2])}</span>` : ""}</div>
+    const s = synth(r), c = conclusion(r, s), k = r[0] + "|" + (r[2] || ""), on = PT_OPEN.has(k);
+    return `<div class="drug pt${on ? " open" : ""}" data-k="${esc(k)}"><div class="dhead prow">
+      <div><div class="dn" style="font-size:16px">${hl(r[0], terms)}${r[2] ? `<span class="rt">${esc(r[2])}</span>` : ""}</div>
       <div class="di">${hl(r[1], terms)}</div>${extraBtns(r, "*")}</div>
-      ${conclusion(r, s)}${detailBlock(r, s)}
-      <div class="disc">自動比對僅根據表中文字的數值與族群條件，敘述式條件可能遺漏；多重特性的結論為條列整合，非藥動學運算。請務必核對原文與臨床情境後再決定劑量。</div>
+      <button class="whybtn" onclick="ptToggle(this)">${on ? "收合依據 ◂" : "查看依據 ▸"}</button></div>
+      <div class="pbody"><div class="pmain">${c.main}</div>
+      <div class="pside">${c.side}${detailBlock(r, s).replace("<details class=\"det\">", "<details class=\"det\" open>")}
+      <div class="disc">自動比對僅根據表中文字的數值與族群條件，敘述式條件可能遺漏；多重特性的結論為條列整合，非藥動學運算。請務必核對原文與臨床情境後再決定劑量。</div></div></div>
       </div>`;
   }).join("");
 }
