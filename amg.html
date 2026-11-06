@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Aminoglycoside 計算器</title>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--ink:#1a1d21;--muted:#6b7280;--line:#e3e6ea;--accent:#0c3d54;--accent2:#0e6f8f;
+--ok:#0f7b4f;--warn:#b45309;--bad:#b91c1c;--okbg:#e8f5ee;--warnbg:#fdf3e3;--badbg:#fdeaea;}
+@media (prefers-color-scheme:dark){:root{--bg:#14171a;--card:#1c2024;--ink:#e8eaed;--muted:#9aa3ad;--line:#2c3238;
+--accent:#7fc4dd;--accent2:#9fd6e8;--okbg:#123024;--warnbg:#3a2c12;--badbg:#3a1a1a;--ok:#5fd2a0;--warn:#e0a955;--bad:#f08b8b;}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 -apple-system,"Segoe UI","Noto Sans TC",sans-serif;padding:16px}
+.wrap{max-width:1100px;margin:0 auto}
+h1{font-size:20px;margin:0 0 12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:14px}
+.card h2{font-size:15px;margin:0 0 12px;color:var(--accent)}
+.card h3{font-size:13px;margin:14px 0 8px;color:var(--accent2);font-weight:600}
+.grid{display:grid;gap:10px 14px;grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
+label{display:block;font-size:12.5px;color:var(--muted);margin-bottom:3px}
+input,select{width:100%;padding:7px 9px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink);font-size:14px}
+input:focus,select:focus{outline:2px solid var(--accent2);outline-offset:-1px}
+input[readonly]{background:transparent;font-weight:600}
+.radios{display:flex;gap:14px;padding-top:6px}
+.radios label{color:var(--ink);font-size:14px;display:flex;align-items:center;gap:5px;margin:0}
+.radios input{width:auto}
+button{background:var(--accent);color:#fff;border:0;border-radius:6px;padding:9px 20px;font-size:14px;cursor:pointer}
+button.ghost{background:transparent;color:var(--muted);border:1px solid var(--line)}
+button.sm{padding:2px 10px;font-size:12px}
+.btnrow{display:flex;gap:10px;margin:4px 0 14px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line)}
+th{color:var(--muted);font-weight:500;font-size:12.5px}
+td.v{font-variant-numeric:tabular-nums;font-weight:600}
+tr.sec td{background:var(--bg);color:var(--accent2);font-weight:600;font-size:12.5px}
+.nav{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.nav button{background:var(--card);color:var(--muted);border:1px solid var(--line);border-radius:8px;padding:8px 16px;font-size:14px}
+.nav button.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.page{display:none}.page.on{display:block}
+.flag{padding:8px 10px;border-radius:6px;font-size:13px;margin-top:10px}
+.f-ok{background:var(--okbg);color:var(--ok)}.f-warn{background:var(--warnbg);color:var(--warn)}.f-bad{background:var(--badbg);color:var(--bad)}
+.note{font-size:12.5px;color:var(--muted);margin-top:10px;line-height:1.6}
+.err{font-size:12.5px;color:var(--bad);margin-top:8px}
+.two{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
+.scroll{overflow-x:auto}
+.unit{display:flex;align-items:center;padding:0 8px;border:1px solid var(--line);border-radius:6px;font-size:12px;color:var(--muted);white-space:nowrap}
+.cmp td,.cmp th{white-space:nowrap}
+.cmp tr.best{background:var(--okbg)}
+.cmp tr.best td:first-child::after{content:"建議";margin-left:6px;font-size:10.5px;background:var(--ok);color:#fff;padding:1px 6px;border-radius:8px}
+.cmp tr.bad{opacity:.5}
+.tag{font-size:11px;padding:1px 6px;border-radius:8px}
+.t-ok{background:var(--okbg);color:var(--ok)}.t-warn{background:var(--warnbg);color:var(--warn)}.t-bad{background:var(--badbg);color:var(--bad)}
+.alerts li{font-size:12.5px;color:var(--warn);margin-bottom:4px}
+canvas{max-width:100%;width:100%}
+.i{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;margin-left:5px;border:1px solid var(--muted);border-radius:50%;color:var(--muted);font:italic 700 10px/1 Georgia,serif;cursor:help;vertical-align:middle;user-select:none}
+.i:hover,.i.on{background:var(--accent2);border-color:var(--accent2);color:#fff}
+#tip{position:fixed;z-index:999;display:none;max-width:320px;padding:9px 11px;border-radius:7px;background:#1f2933;color:#f1f5f9;font-size:12.5px;line-height:1.6;white-space:pre-line;box-shadow:0 6px 20px rgba(0,0,0,.18);pointer-events:none}
+.dt{display:flex;gap:6px}.dt input[type=date]{flex:1.4}.dt input[type=text]{flex:1}
+.nav.sub button{padding:6px 14px;font-size:13px}
+button.rpt{background:var(--ok)}
+#rptBox{position:fixed;inset:0;z-index:1000;display:none;align-items:center;justify-content:center;background:rgba(15,20,25,.55);padding:16px}
+#rptBox.on{display:flex}
+#rptBox .dlg{background:var(--card);border:1px solid var(--line);border-radius:12px;width:min(820px,100%);max-height:calc(100vh - 32px);display:flex;flex-direction:column;box-shadow:0 20px 50px rgba(0,0,0,.3)}
+#rptBox .hd{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--line)}
+#rptBox .hd b{flex:1;color:var(--accent);font-size:15px}
+#rptBox .view{display:flex;flex-direction:column;min-height:0;flex:1}
+#rptBox .opts{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;padding:10px 16px 0}
+#rptBox .opts label{display:flex;align-items:center;gap:6px;margin:0;color:var(--muted);font-size:12.5px}
+#rptBox .opts select,#rptBox .opts input{width:auto;padding:4px 8px;font-size:13px}
+#rptBox .cloud{margin-left:auto;font-size:12.5px;color:var(--muted)}
+#rptBox .cloud a{color:var(--accent2)}
+#rptText,#te_text{flex:1;min-height:340px;margin:10px 16px;padding:12px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);
+  font:14px/1.7 ui-monospace,Menlo,Consolas,"Noto Sans TC",monospace;resize:vertical;white-space:pre-wrap}
+#rptBox .ft{display:flex;gap:8px;align-items:center;padding:0 16px 14px;flex-wrap:wrap}
+#rptBox .ft .msg{flex:1;font-size:12.5px;color:var(--ok)}
+.tehelp{padding:8px 16px 0;font-size:12.5px;color:var(--muted)}
+.tehelp code{background:var(--bg);padding:1px 4px;border-radius:4px}
+.toks{display:flex;flex-direction:column;gap:6px;padding:0 16px 12px;max-height:190px;overflow:auto}
+.tokg{display:flex;flex-wrap:wrap;gap:5px;align-items:center}
+.tokg b{font-size:12px;color:var(--muted);font-weight:600;width:100%}
+.tok{background:var(--bg);color:var(--accent);border:1px solid var(--line);padding:3px 9px;font:13px -apple-system,"Noto Sans TC",sans-serif;border-radius:5px}
+.tok small{font-family:-apple-system,"Noto Sans TC",sans-serif;color:var(--muted);margin-left:5px;font-size:11px}
+.tok:hover{border-color:var(--accent2)}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>Aminoglycoside 計算器</h1>
+
+<!-- ① 病人資料（最先輸入；Dose Adjustment 頁隱藏，同原始網站） -->
+<div class="card" id="patCard">
+  <h2>① 病人資料</h2>
+  <div class="grid">
+    <div><label>Age (years)</label><input id="age" type="number" min="18"><div class="err" id="ageErr"></div></div>
+    <div><label>SCr</label><div style="display:flex;gap:6px"><input id="scr" type="number" step="0.01"><span class="unit">mg/dL</span></div></div>
+    <div><label>Height</label><div style="display:flex;gap:6px"><input id="ht" type="number" step="0.1"><span class="unit">cm</span></div></div>
+    <div><label>Actual body weight</label><div style="display:flex;gap:6px"><input id="wt" type="number" step="0.1"><span class="unit">kg</span></div></div>
+    <div><label>性別</label><div class="radios">
+      <label><input type="radio" name="sex" value="M" checked>男</label>
+      <label><input type="radio" name="sex" value="F">女</label></div></div>
+  </div>
+</div>
+
+
+<div class="card">
+  <h2>② 藥品與給藥方式</h2>
+  <div class="grid"><div><label>藥品</label><select id="drug"><option value="gt">Gentamicin</option><option value="ak">Amikacin</option></select></div>
+  <div><label>給藥方式</label><div class="radios">
+    <label><input type="radio" name="mode" value="trad" checked>傳統分次給藥（Traditional）</label>
+    <label><input type="radio" name="mode" value="eid">延長間隔給藥（Extended-interval）</label>
+  </div></div></div>
+  <div id="screen"></div>
+</div>
+
+<div class="card" id="eidCard" style="display:none">
+  <h2>Extended-Interval Dosing <span style="font-weight:400;font-size:12.5px;color:var(--muted)">採用 Urban &amp; Craig nomogram：Gentamicin 5 mg/kg、Amikacin 15 mg/kg</span></h2>
+  <div class="two">
+    <div>
+      <h3 style="margin-top:0">起始劑量</h3>
+      <div class="scroll"><table id="tEID"></table></div>
+    </div>
+    <div>
+      <h3 style="margin-top:0">隨機濃度判讀（第一劑後 8–12 小時抽血）</h3>
+      <div class="grid">
+        <div><label>隨機濃度 (mcg/mL)</label><input id="e_c" type="number" step="0.1"></div>
+        <div><label>給藥開始→抽血 (hr)</label><input id="e_t" type="text" readonly></div>
+      </div>
+      <div class="two" style="margin-top:4px">
+        <div><h3>給藥開始</h3><div class="dt"><input id="e_d0" type="date"><input id="e_h0" type="text" placeholder="HH:MM" inputmode="numeric" maxlength="5"></div></div>
+        <div><h3>抽血</h3><div class="dt"><input id="e_d1" type="date"><input id="e_h1" type="text" placeholder="HH:MM" inputmode="numeric" maxlength="5"></div></div>
+      </div>
+      <div class="err" id="e_err"></div>
+      <div class="scroll" style="margin-top:8px"><table id="tNomo"></table></div>
+    </div>
+  </div>
+  <canvas id="chart_nomo" height="300" style="margin-top:10px"></canvas>
+  <div class="note">輸入隨機濃度與抽血時間後，紅點即為落點，綠色區域為建議給藥間隔；落在線上取較長間隔。Amikacin 濃度已自動除以 3 後再標示。曲線依 Stanford Aminoglycoside Dosing Guide Appendix A2（Urban &amp; Craig）圖形數位化。</div>
+  <h3>後續追蹤抽血建議</h3>
+  <div id="eFollow"></div>
+
+</div>
+
+
+<div id="tradAll">
+<div class="nav">
+  <button class="on" data-p="init">Initial Dosing</button>
+  <button data-p="pt" id="navPT">Dose Adjustment</button>
+</div>
+
+<div class="card" id="goalCard">
+  <h2>Goal</h2>
+  <div class="grid">
+    <div id="tgtBox"><label>適應症</label><select id="tgt"></select></div>
+    <div><label>Peak</label><div style="display:flex;gap:6px"><input id="gpk" type="number" step="0.5"><span class="unit">mcg/mL</span></div></div>
+    <div><label>Trough</label><div style="display:flex;gap:6px"><input id="gtr" type="number" step="0.1"><span class="unit">mcg/mL</span></div></div>
+  </div>
+  <div class="note" id="tgtNote"></div>
+</div>
+
+<div class="card">
+  <h2>Settings</h2>
+  <div class="grid">
+    <div><label>Infusion time</label><div style="display:flex;gap:6px"><select id="ti"><option>0.5</option><option selected>1</option></select><span class="unit">hr</span></div></div>
+    <div class="popOnly"><label>V（族群）</label><div style="display:flex;gap:6px"><input id="vkg" type="number" step="0.01" value="0.26"><span class="unit">L/kg</span></div><div class="note" style="margin-top:4px">網站：一般成人 0.26（0.2–0.3）；Cystic fibrosis 0.35</div></div>
+    <div class="popOnly"><label>額外體液（overhydration）</label><div style="display:flex;gap:6px"><input id="fluid" type="number" step="0.5" placeholder="0"><span class="unit">L</span></div></div>
+  </div>
+</div>
+
+<!-- ============================ Initial Dosing ============================ -->
+<div class="page on" id="page-init">
+<div class="btnrow"><button onclick="computed=true;run()">計算</button><button class="ghost" onclick="clearAll()">重設</button></div>
+
+<div class="card">
+  <h2>Estimated PK Parameters</h2>
+  <div class="scroll"><table id="pk"></table></div>
+  <div class="note" id="pkNote"></div>
+</div>
+
+<div id="tradBox">
+<div class="card">
+  <h2>Initial Dosing</h2>
+  <div class="two">
+    <div>
+      <div class="grid">
+        <div><label>劑量 Dose</label><div style="display:flex;gap:6px"><input id="doseAlt" type="number"><span class="unit">mg</span></div></div>
+        <div><label>間隔 Interval</label><div style="display:flex;gap:6px"><select id="tau">
+          <option>8</option><option>12</option><option>24</option><option>36</option><option>48</option></select><span class="unit">hrs</span></div></div>
+      </div>
+      <div class="btnrow" style="margin:10px 0 0"><button onclick="addCompare('init')">＋ 加入比較</button></div>
+      <div class="note" id="recNote"></div>
+    </div>
+    <div class="scroll"><table id="tInit"></table></div>
+  </div>
+  <ul class="alerts" id="aInit"></ul>
+</div>
+
+<div class="card"><h2>給藥方案比較</h2><div class="scroll"><table class="cmp" id="cmp_init"></table></div></div>
+<div class="card"><h2>藥動模擬圖</h2><canvas id="chart_init" height="260"></canvas></div>
+</div>
+</div>
+
+<!-- ============================ Dose Adjustment ============================ -->
+<div class="page" id="page-pt">
+<div class="card">
+  <h2>Dose Adjustment</h2>
+  <div class="two">
+    <div>
+      <div class="grid">
+        <div><label>劑量 (mg)</label><input id="q_dose" type="number"></div>
+        <div><label>間隔 τ (hr)</label><select id="q_tau"><option>8</option><option>12</option><option selected>24</option><option>36</option><option>48</option></select></div>
+        <div><label>Peak 濃度 (mcg/mL)</label><input id="q_pk" type="number" step="0.1"></div>
+        <div><label>Trough 濃度 (mcg/mL)</label><input id="q_tr" type="number" step="0.1"></div>
+      </div>
+      <div class="two" style="margin-top:4px">
+        <div>
+          <h3>Peak 給藥開始</h3>
+          <div class="dt"><input id="q_d0" type="date"><input id="q_h0" type="text" placeholder="HH:MM" inputmode="numeric" maxlength="5"></div>
+          <h3>Peak 抽血</h3>
+          <div class="dt"><input id="q_d1" type="date"><input id="q_h1" type="text" placeholder="HH:MM" inputmode="numeric" maxlength="5"></div>
+          <div style="margin-top:10px"><label>給藥開始→Peak (hr)</label><input id="q_tpk" type="text" readonly></div>
+        </div>
+        <div>
+          <h3>Trough 給藥開始</h3>
+          <div class="dt"><input id="q_d3" type="date"><input id="q_h3" type="text" placeholder="HH:MM" inputmode="numeric" maxlength="5"></div>
+          <h3>Trough 抽血</h3>
+          <div class="dt"><input id="q_d2" type="date"><input id="q_h2" type="text" placeholder="HH:MM" inputmode="numeric" maxlength="5"></div>
+          <div style="margin-top:10px"><label>給藥開始→Trough (hr)</label><input id="q_ttr" type="text" readonly></div>
+        </div>
+      </div>
+      <div class="btnrow" style="margin:14px 0 0"><button onclick="computedPT=true;run()">計算</button><button class="ghost" onclick="clearAll()">重設</button></div>
+      <div class="err" id="q_err"></div>
+    </div>
+    <div class="scroll"><table id="tPT"></table></div>
+  </div>
+  <ul class="alerts" id="aPT"></ul>
+</div>
+
+<div class="card">
+  <h2>建議劑量</h2>
+  <div class="two">
+    <div>
+      <div class="grid">
+        <div><label>劑量 Dose</label><div style="display:flex;gap:6px"><input id="q_ndose" type="number"><span class="unit">mg</span></div></div>
+        <div><label>間隔 Interval</label><div style="display:flex;gap:6px"><select id="q_ntau">
+          <option>8</option><option>12</option><option>24</option><option>36</option><option>48</option></select><span class="unit">hrs</span></div></div>
+      </div>
+      <div class="btnrow" style="margin:10px 0 0"><button onclick="addCompare('pt')">＋ 加入比較</button></div>
+      <div class="note" id="q_rec"></div>
+    </div>
+    <div class="scroll"><table id="q_adopt"></table></div>
+  </div>
+</div>
+
+<div class="card"><h2>給藥方案比較</h2><div class="scroll"><table class="cmp" id="cmp_pt"></table></div></div>
+<div class="card"><h2>藥動模擬圖</h2><canvas id="chart_pt" height="260"></canvas></div>
+</div>
+
+</div><!-- /tradAll -->
+
+<div class="card note">
+<b>計算方法（依 VancoPK aminoglycoside calculator）</b><br>
+IBW：男 50 + 2.3×(身高吋−60)；女 45.5 + 2.3×(身高吋−60)。V 用體重：TBW &gt;120% IBW 用 AdjBW(0.4)；CrCl 用體重：TBW &gt;130% IBW 用 AdjBW(0.2)；TBW &lt; IBW 皆用 TBW。<br>
+CrCl：Cockcroft-Gault（上限 120）；K = 0.0024×CrCl + 0.01；t½ = 0.693/K；V = V(L/kg)×體重 + 額外體液。<br>
+τ = ln(Peak/Trough)/K + tᵢ；Dose = tᵢ·V·K·Peak·(1−e<sup>−Kτ</sup>)/(1−e<sup>−Ktᵢ</sup>)。Peak 指輸注結束時濃度。<br>
+兩點法（穩態）：K = ln(C<sub>peak</sub>/C<sub>trough</sub>)/(t<sub>trough</sub>−t<sub>peak</sub>)，外推得 Cmax（輸注結束）、Cmin（下一劑前）；V = Dose·(1−e<sup>−Ktᵢ</sup>)/[K·tᵢ·(Cmax − Cmin·e<sup>−Ktᵢ</sup>)]。<br>
+延長間隔給藥：劑量 = mg/kg（Urban &amp; Craig：Gentamicin 5；Amikacin 15）× 劑量體重（同 V 用體重規則）；起始間隔依 CrCl（Stanford 表），隨機濃度依 Hartford／Urban &amp; Craig nomogram 判讀。<br>
+劑量進位：Gentamicin 每 10 mg、Amikacin 每 25 mg（自行設定，可改 ROUND）。<br>
+<b>不適用：</b>&lt;18 歲、腎功能不穩定、血液透析。本工具僅供輔助計算，請以臨床判斷與院內規範為準。
+</div>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const TARGETS={
+ // [名稱, 預設peak, 預設trough, 網站範圍, 是否含自行推論]
+ gt:[["G(+) synergy",3,0.5,"Peak 3–4 / Trough 0.5–<1",0],
+     ["腹腔內感染",5,0.5,"Peak 5–7 / Trough 0.5–<2",0],
+     ["綠膿桿菌肺炎",8,0.5,"Peak 8–10 / Trough 0.5–<2",0]],
+ ak:[["Amikacin（網站未分適應症）",20,1,"Peak 15–35（常用 20–30）/ Trough <8（理想 1–4）",1]]
+};
+const ROUND={gt:10,ak:25};
+const TAUS=[8,12,24,36,48];
+let computed=false,computedPT=false,curPage='init',lastPT=null;
+const CMP={init:[],pt:[]};
+const f=(x,d=1)=>isFinite(x)?x.toFixed(d):'—';
+const rows=a=>a.map(r=>r[0]==='§'?`<tr class="sec"><td colspan="2">${r[1]}</td></tr>`:`<tr><td>${r[0]}</td><td class="v">${r[1]}</td></tr>`).join('');
+
+function fillTargets(){const d=$('drug').value;$('tgtBox').style.display=TARGETS[d].length>1?'':'none';
+ $('tgt').innerHTML=TARGETS[d].map((t,i)=>`<option value="${i}">${t[0]}${t[4]?'（預設值含推論）':''}</option>`).join('');setTargets();}
+function setTargets(){const t=TARGETS[$('drug').value][+$('tgt').value];
+ $('gpk').value=t[1];$('gtr').value=t[2];
+ $('tgtNote').innerHTML='網站範圍：'+t[3]+'；預設取最低目標值'+(t[4]?"<br><span style='color:var(--warn)'>⚠ 推論：網站 Peak 有兩組範圍，預設取「常用」下限 20；Trough 取「理想」下限 1，請確認。</span>":'');}
+
+function patient(){
+ const sex=document.querySelector('input[name=sex]:checked').value,age=+$('age').value,
+  htIn=+$('ht').value/2.54,tbw=+$('wt').value,scr=+$('scr').value;
+ $('ageErr').textContent=(age&&age<18)?'本計算器不適用 <18 歲':'';
+ if(!age||age<18||!htIn||!tbw||!scr) return null;
+ const ibw=(sex==='M'?50:45.5)+2.3*(htIn-60);
+ let vw,vwl,cw,cwl;
+ if(tbw<ibw){vw=cw=tbw;vwl=cwl='TBW（體重過輕）';}
+ else{ if(tbw>1.2*ibw){vw=ibw+0.4*(tbw-ibw);vwl='AdjBW(0.4)';}else{vw=ibw;vwl='IBW';}
+       if(tbw>1.3*ibw){cw=ibw+0.2*(tbw-ibw);cwl='AdjBW(0.2)';}else{cw=ibw;cwl='IBW';}}
+ let crcl=(140-age)*cw/(72*scr)*(sex==='F'?0.85:1);const capped=crcl>120;crcl=Math.min(crcl,120);
+ const K=0.0024*crcl+0.01, V=(+$('vkg').value||0.26)*vw+(+$('fluid').value||0);
+ return{age,tbw,ibw,vw,vwl,cw,cwl,crcl,capped,K,V};
+}
+const ti=()=>+$('ti').value, drug=()=>$('drug').value;
+function predict(K,V,dose,tau){const t=ti();
+ const pk=dose*(1-Math.exp(-K*t))/(t*K*V*(1-Math.exp(-K*tau)));return{pk,tr:pk*Math.exp(-K*(tau-t))};}
+function recommend(K,V,peak,trough){const t=ti(),r=ROUND[drug()];
+ const tauCalc=Math.log(peak/trough)/K+t, tau=TAUS.find(x=>x>=tauCalc*0.9)||48;
+ const dose=t*V*K*peak*(1-Math.exp(-K*tau))/(1-Math.exp(-K*t));
+ return{tauCalc,tau,dose,doseR:Math.max(r,Math.round(dose/r)*r),ld:Math.round(V*peak/r)*r};}
+function judge(p){const pk=+$('gpk').value,tr=+$('gtr').value;
+ return (p.pk>=pk&&p.tr<=Math.max(tr,2)&&p.tr<8)?'t-ok':'t-warn';}
+function levelRows(K,V,dose,tau,ld){const p=predict(K,V,dose,tau),j=judge(p);
+ return{p,html:rows([['§','預估濃度（穩態）'],['Peak（輸注結束）',`<span class="tag ${j}">${f(p.pk)}</span> mcg/mL`],
+  ['Trough',`<span class="tag ${j}">${f(p.tr,2)}</span> mcg/mL`],['每日劑量',f(dose*24/tau,0)+' mg/day'],
+  ...(curPage==='init'?[['mg/kg（V 用體重）',f(dose/(patient()?.vw||NaN),2)+' mg/kg']]:[])])};}
+
+function runInit(){
+ const P=patient(),a=[];
+ if(!P){$('pk').innerHTML='';$('tInit').innerHTML='';$('pkNote').textContent=(+$('age').value&&+$('age').value<18)?'本計算器不適用 <18 歲。':'請輸入年齡、SCr、身高、體重。';return;}
+ $('pkNote').textContent='';
+ $('pk').innerHTML=rows([['IBW',f(P.ibw)+' kg'],['V 用體重',f(P.vw)+' kg（'+P.vwl+'）'],['CrCl 用體重',f(P.cw)+' kg（'+P.cwl+'）'],
+  ['CrCl',f(P.crcl,0)+' mL/min'+(P.capped?'（已設上限 120）':'')],['K',f(P.K,4)+' hr⁻¹'],['t½',f(0.693/P.K)+' hr'],['V',f(P.V)+' L']]);
+ const R=recommend(P.K,P.V,+$('gpk').value,+$('gtr').value);
+ if(!$('doseAlt').dataset.touched)$('doseAlt').value=R.doseR;if(!$('tau').dataset.touched)$('tau').value=R.tau;
+ $('recNote').innerHTML=`系統建議 <b>${R.doseR} mg q${R.tau}h</b>（計算間隔 ${f(R.tauCalc)} hr，計算劑量 ${f(R.dose,0)} mg）`+(($('doseAlt').dataset.touched||$('tau').dataset.touched)?'　<span style="color:var(--warn)">目前為手動輸入值</span>':'');
+ const L=levelRows(P.K,P.V,+$('doseAlt').value,+$('tau').value);$('tInit').innerHTML=L.html;
+
+ if(P.crcl<30)a.push('CrCl < 30：建議以血中濃度個別化給藥並密切監測。');
+ $('aInit').innerHTML=a.map(x=>`<li>${x}</li>`).join('');
+ drawChart('init',P.K,P.V,+$('doseAlt').value,+$('tau').value,0);
+}
+
+function runPT(){
+ const tp=dtHours($('q_d0').value,$('q_h0').value,$('q_d1').value,$('q_h1').value),
+  tt=dtHours($('q_d3').value,$('q_h3').value,$('q_d2').value,$('q_h2').value);
+ $('q_tpk').value=isFinite(tp)?f(tp,2):'';$('q_ttr').value=isFinite(tt)?f(tt,2):'';
+ const dose=+$('q_dose').value,tau=+$('q_tau').value,c1=+$('q_pk').value,c2=+$('q_tr').value,t=ti(),a=[];
+ $('q_err').textContent='';
+ if(!dose||!c1||!c2){$('tPT').innerHTML='';$('q_adopt').innerHTML='';return;}
+ if(!isFinite(tp)||!isFinite(tt)){$('q_err').textContent='請輸入 Peak、Trough 的給藥開始與抽血日期、時間（HH:MM）。';return;}
+ if(tp<Math.max(t,1))a.push('Peak 抽血時間（開始輸注→抽血 '+f(tp,2)+' hr）未達 1 小時，可能仍在分布期，回推的 K、V 不可信。');
+ if(tt<=tp||c2>=c1){$('q_err').textContent='Trough 必須在 Peak 之後（同一給藥間隔內時間較晚）且濃度較低。';return;}
+ const K=Math.log(c1/c2)/(tt-tp), cmax=c1*Math.exp(K*(tp-t)), cmin=cmax*Math.exp(-K*(tau-t));
+ const V=dose*(1-Math.exp(-K*t))/(K*t*(cmax-cmin*Math.exp(-K*t)));
+ $('tPT').innerHTML=rows([['§','病人個別參數'],['K',f(K,4)+' hr⁻¹'],['t½',f(0.693/K)+' hr'],
+  ['V',f(V)+' L'],['Cmax（輸注結束）',f(cmax)+' mcg/mL'],['Cmin（下一劑前）',f(cmin,2)+' mcg/mL']]);
+ const R=recommend(K,V,+$('gpk').value,+$('gtr').value);
+ if(!$('q_ndose').dataset.touched)$('q_ndose').value=R.doseR;if(!$('q_ntau').dataset.touched)$('q_ntau').value=R.tau;
+ $('q_rec').innerHTML=`系統建議 <b>${R.doseR} mg q${R.tau}h</b>（計算間隔 ${f(R.tauCalc)} hr，計算劑量 ${f(R.dose,0)} mg）`+(($('q_ndose').dataset.touched||$('q_ntau').dataset.touched)?'　<span style="color:var(--warn)">目前為手動輸入值</span>':'');
+ $('q_adopt').innerHTML=levelRows(K,V,+$('q_ndose').value,+$('q_ntau').value).html;
+ if(tau>=24&&tt>tau)a.push('Trough 抽血時間超過給藥間隔，請確認是否為同一劑。');
+ $('aPT').innerHTML=a.map(x=>`<li>${x}</li>`).join('');
+ lastPT={K,V};
+ drawChart('pt',K,V,+$('q_ndose').value,+$('q_ntau').value,0);
+}
+
+function addCompare(ctx){
+ let K,V,dose,tau;
+ if(ctx==='init'){const P=patient();if(!P)return;K=P.K;V=P.V;dose=+$('doseAlt').value;tau=+$('tau').value;}
+ else{if(!lastPT)return;({K,V}=lastPT);dose=+$('q_ndose').value;tau=+$('q_ntau').value;}
+ const p=predict(K,V,dose,tau);CMP[ctx].push({dose,tau,pk:p.pk,tr:p.tr,j:judge(p)});renderCmp(ctx);}
+function renderCmp(ctx){const L=CMP[ctx];
+ $('cmp_'+ctx).innerHTML=L.length?'<tr><th>方案</th><th>Peak</th><th>Trough</th><th>mg/day</th><th></th></tr>'+
+ L.map((r,i)=>`<tr class="${r.j==='t-ok'?'':'bad'}"><td>${r.dose} mg q${r.tau}h</td><td>${f(r.pk)}</td><td>${f(r.tr,2)}</td><td>${f(r.dose*24/r.tau,0)}</td><td><button class="ghost sm" onclick="CMP['${ctx}'].splice(${i},1);renderCmp('${ctx}')">✕</button></td></tr>`).join(''):'';}
+
+function drawChart(ctx,K,V,dose,tau,ld){
+ const cv=$('chart_'+ctx);if(!cv||!isFinite(K)||!dose||!tau)return;
+ const w=cv.clientWidth||600,h=260,dpr=window.devicePixelRatio||1;cv.width=w*dpr;cv.height=h*dpr;
+ const g=cv.getContext('2d');g.scale(dpr,dpr);g.clearRect(0,0,w,h);
+ const t=ti(),T=Math.max(tau*4,72),N=400,pts=[];
+ const conc=x=>{let c=0;const doses=[];if(ld)doses.push([0,ld]);
+  for(let s=(ld?tau:0);s<=x;s+=tau)doses.push([s,dose]);
+  for(const [s,D] of doses){const dt=x-s;if(dt<0)continue;const k0=D/t;
+   c+= dt<=t? k0/(K*V)*(1-Math.exp(-K*dt)) : k0/(K*V)*(1-Math.exp(-K*t))*Math.exp(-K*(dt-t));}return c;};
+ let ymax=+$('gpk').value*1.4;for(let i=0;i<=N;i++){const x=T*i/N,y=conc(x);pts.push([x,y]);ymax=Math.max(ymax,y*1.1);}
+ const css=getComputedStyle(document.documentElement),L=40,B=24,X=x=>L+(w-L-10)*x/T,Y=y=>h-B-(h-B-10)*y/ymax;
+ g.strokeStyle=css.getPropertyValue('--line');g.fillStyle=css.getPropertyValue('--muted');g.font='11px sans-serif';
+ for(let i=0;i<=4;i++){const y=ymax*i/4;g.beginPath();g.moveTo(L,Y(y));g.lineTo(w-10,Y(y));g.stroke();g.fillText(f(y),4,Y(y)+4);}
+ for(let x=0;x<=T;x+=Math.max(12,tau)){g.fillText(x+'h',X(x)-8,h-6);}
+ const band=(lo,col)=>{g.strokeStyle=col;g.setLineDash([4,4]);g.beginPath();g.moveTo(L,Y(lo));g.lineTo(w-10,Y(lo));g.stroke();g.setLineDash([]);};
+ band(+$('gpk').value,css.getPropertyValue('--ok'));band(+$('gtr').value,css.getPropertyValue('--warn'));
+ g.strokeStyle=css.getPropertyValue('--accent2');g.lineWidth=2;g.beginPath();pts.forEach(([x,y],i)=>i?g.lineTo(X(x),Y(y)):g.moveTo(X(x),Y(y)));g.stroke();g.lineWidth=1;
+}
+
+function parseHM(s){s=(s||'').trim();let m=s.match(/^(\d{1,2}):(\d{2})$/)||s.match(/^(\d{1,2})(\d{2})$/);
+ if(!m)return null;const H=+m[1],M=+m[2];return(H<24&&M<60)?{H,M}:null;}
+function dtHours(d1,t1,d2,t2){const a=parseHM(t1),b=parseHM(t2);if(!d1||!d2||!a||!b)return NaN;
+ const A=new Date(d1+'T00:00'),B=new Date(d2+'T00:00');A.setHours(a.H,a.M);B.setHours(b.H,b.M);return(B-A)/3600000;}
+const today=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');};
+
+function clearAll(){document.querySelectorAll('#patCard input[type=number],#page-'+curPage+' input[type=number],#page-'+curPage+' input[type=text]').forEach(e=>{e.value='';delete e.dataset.touched;});
+ CMP[curPage]=[];renderCmp(curPage);computed=computedPT=false;modeTouched=false;run();}
+const NOMO={
+ // 每條線 = 邊界；濃度 ≥ 該線 → 該線標示的間隔（0 = 高於 Q48 上緣）
+ // Urban & Craig：曲線（每 0.5 hr 取點）；q12 邊界以指數外推至 ~10.7 hr
+ '5':{name:'Urban & Craig',div:3,low:12,lines:[
+  [24,[[6,2.5],[6.5,2.14],[7,1.77],[7.5,1.51],[8,1.26],[8.5,1.06],[9,0.9],[9.5,0.76],[10,0.64],[10.7,0.5],[14,0]]],
+  [36,[[6,7.0],[6.5,6.54],[7,6.09],[7.5,5.7],[8,5.32],[8.5,4.98],[9,4.62],[9.5,4.32],[10,4.03],[10.5,3.76],[11,3.49],[11.5,3.25],[12,3.01],[12.5,2.8],[13,2.59],[13.5,2.41],[14,2.24]]],
+  [48,[[6,9.7],[6.5,9.3],[7,8.89],[7.5,8.51],[8,8.14],[8.5,7.79],[9,7.44],[9.5,7.12],[10,6.81],[10.5,6.53],[11,6.23],[11.5,5.97],[12,5.7],[12.5,5.45],[13,5.21],[13.5,4.99],[14,4.78]]],
+  [0,[[6,11.6],[6.5,11.3],[7,10.99],[7.5,10.6],[8,10.23],[8.5,9.89],[9,9.56],[9.5,9.26],[10,8.95],[10.5,8.66],[11,8.37],[11.5,8.1],[12,7.82],[12.5,7.57],[13,7.31],[13.5,7.08],[14,6.87]]]]}
+};
+const interp=(pts,x)=>{for(let i=1;i<pts.length;i++)if(x<=pts[i][0]){const[a,b]=[pts[i-1],pts[i]];return a[1]+(b[1]-a[1])*(x-a[0])/(b[0]-a[0]);}return pts.at(-1)[1];};
+const nomoKey=()=>'5'; // 固定使用 Urban & Craig
+function crclInterval(crcl,key){ // Stanford 起始間隔表
+ if(crcl>=60)return'Q24H';if(crcl>=40)return'Q36H';
+ if(key==='7')return crcl>=30?'Q48H':'不建議';return crcl>=20?'Q48H':'不建議';}
+function runNomo(){
+ const N=NOMO[nomoKey()],t=dtHours($('e_d0').value,$('e_h0').value,$('e_d1').value,$('e_h1').value),c=+$('e_c').value;
+ $('e_t').value=isFinite(t)?f(t,2):'';$('e_err').textContent='';$('tNomo').innerHTML='';
+ let pt=null,ivOut=null;
+ if(c&&isFinite(t)){
+  if(t<6||t>14){$('e_err').textContent='抽血時間需在開始輸注後 6–14 小時內才能對照 nomogram。';}
+  else{const cp=drug()==='ak'?c/N.div:c;let iv=N.low,top=false;
+   for(const[q,pts] of N.lines){if(cp>=interp(pts,t)){if(q)iv=q;else top=true;}}
+   const w=[];if(t<8||t>12)w.push('文件建議抽血時間為 8–12 小時。');
+   $('tNomo').innerHTML=rows([['抽血時間',f(t,2)+' hr'],
+    ['判讀用濃度',f(cp,2)+' mcg/mL'+(drug()==='ak'?'（實測 '+c+' ÷ '+N.div+'）':'')],
+    ['建議間隔',top?'<span class="tag t-bad">高於 Q48 線</span>':'<span class="tag t-ok">Q'+iv+'H</span>']])+
+    (w.length?`<tr><td colspan="2" class="err">${w.join(' ')}</td></tr>`:'');
+   pt=[t,cp];if(!top)ivOut=iv;}}
+ drawNomo(N,pt);followUp(ivOut);
+}
+function followUp(iv){
+ const fmt=d=>`${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+ const s=parseHM($('e_h0').value),d0=$('e_d0').value;let t0=null;
+ if(s&&d0){t0=new Date(d0+'T00:00');t0.setHours(s.H,s.M);}
+ const rowsF=[];
+ if(iv&&t0){const nd=new Date(t0.getTime()+iv*3600e3),et=new Date(nd.getTime()-6*3600e3);
+  rowsF.push(['下一劑給藥時間',fmt(nd)+'（Q'+iv+'H）']);
+  rowsF.push(['Early trough（下一劑前 6 小時）',fmt(et)+'　目標 <1 mcg/mL；腎功能急性變化或懷疑給藥失敗時抽']);}
+ rowsF.push(['定期追蹤隨機濃度','至少每週一次']);
+ rowsF.push(['聽力檢查','預期療程 >2 週時考慮']);
+ $('eFollow').innerHTML='<div class="scroll"><table>'+rows(rowsF)+'</table></div>'+
+  (iv&&t0?'':'<div class="note">完成隨機濃度判讀後，會依建議間隔自動帶出下一劑與 early trough 抽血時間。</div>')+
+  '<div class="note">依 Stanford Aminoglycoside Dosing Guide Appendix A2（Urban &amp; Craig）Follow up monitoring。</div>';}
+function drawNomo(N,pt){
+ const cv=$('chart_nomo'),w=cv.clientWidth||600,h=300,dpr=window.devicePixelRatio||1;cv.width=w*dpr;cv.height=h*dpr;cv.style.height=h+'px';
+ const g=cv.getContext('2d');g.scale(dpr,dpr);const css=getComputedStyle(document.documentElement),C=k=>css.getPropertyValue(k);
+ const ymax=12,ymin=0,L=48,B=40,R=12,T=10;
+ const X=x=>L+(w-L-R)*(x-6)/8,Y=y=>h-B-(h-B-T)*(y-ymin)/(ymax-ymin);
+ // 區域：下界、上界（函數），標籤
+ const bounds=[()=>ymin,...N.lines.map(([,p])=>x=>interp(p,x)),()=>ymax];
+ const labels=[N.low,...N.lines.map(([q])=>q)].map(q=>q?'Q'+q+'H':'超出圖表');
+ let hit=-1;
+ if(pt)for(let k=0;k<bounds.length-1;k++){const lo=k?bounds[k](pt[0]):-1e9,hi=k<bounds.length-2?bounds[k+1](pt[0]):1e9;if(pt[1]>=lo&&pt[1]<hi)hit=k;}
+ g.save();g.beginPath();g.rect(L,T,w-L-R,h-B-T);g.clip();
+ if(hit>=0){g.fillStyle=C('--okbg');g.beginPath();
+  for(let x=6;x<=14.001;x+=0.1)g.lineTo(X(x),Y(Math.max(ymin,bounds[hit](x))));
+  for(let x=14;x>=5.999;x-=0.1)g.lineTo(X(x),Y(Math.min(ymax,bounds[hit+1](x))));g.fill();}
+ g.restore();
+ g.font='11px sans-serif';g.strokeStyle=C('--line');g.fillStyle=C('--muted');
+ for(let y=ymin;y<=ymax;y+=2){g.beginPath();g.moveTo(L,Y(y));g.lineTo(w-R,Y(y));g.stroke();g.fillText(y,L-20,Y(y)+4);}
+ for(let x=6;x<=14;x++){g.fillText(x,X(x)-4,h-B+14);}
+ g.fillText('開始輸注後抽血時間（hr）',X(10)-60,h-6);
+ g.save();g.translate(12,Y((ymin+ymax)/2)+50);g.rotate(-Math.PI/2);g.fillText('濃度（mcg/mL）',0,0);g.restore();
+ g.save();g.beginPath();g.rect(L,T,w-L-R,h-B-T);g.clip();
+ g.strokeStyle=C('--accent2');g.lineWidth=2;
+ N.lines.forEach(([,p])=>{g.beginPath();p.forEach(([x,y],i)=>i?g.lineTo(X(x),Y(y)):g.moveTo(X(x),Y(y)));g.stroke();});
+ // 區域標籤（放在 x=8.5 兩條邊界中間）
+ g.font='bold 13px sans-serif';
+ for(let k=0;k<bounds.length-1;k++){const xs=8.5,lo=Math.max(ymin,bounds[k](xs)),hi=Math.min(ymax,bounds[k+1](xs));
+  if(hi-lo<0.6)continue;g.fillStyle=k===hit?C('--ok'):C('--accent');g.fillText(labels[k],X(xs),Y((lo+hi)/2)+5);}
+ g.restore();g.lineWidth=1;
+ if(pt){const px=X(pt[0]),py=Y(Math.min(Math.max(pt[1],ymin),ymax));
+  g.strokeStyle=C('--bad');g.setLineDash([4,4]);g.beginPath();g.moveTo(px,h-B);g.lineTo(px,py);g.lineTo(L,py);g.stroke();g.setLineDash([]);
+  g.fillStyle=C('--bad');g.beginPath();g.arc(px,py,5,0,7);g.fill();
+  g.font='bold 12px sans-serif';g.fillText(f(pt[0],1)+' hr, '+f(pt[1],1)+' mcg/mL → '+(hit>=0?labels[hit]:''),Math.min(px+8,w-200),py-8);}
+}
+function runEID(){
+ const P=patient();
+ if(!P){$('tEID').innerHTML='<tr><td class="err">請先輸入病人資料。</td></tr>';runNomo();return;}
+ const ak=drug()==='ak',mgkg=ak?15:5,r=ROUND[drug()],d=mgkg*P.vw;
+ $('tEID').innerHTML=rows([['CrCl',f(P.crcl,0)+' mL/min（'+P.cwl+'）'],['劑量體重',f(P.vw)+' kg（'+P.vwl+'）'],['mg/kg',mgkg+' mg/kg'],
+  ['計算劑量',f(d,0)+' mg'],['建議劑量',Math.round(d/r)*r+' mg'],
+  ['起始間隔（依 CrCl）',crclInterval(P.crcl,nomoKey())+' <span style="color:var(--muted);font-weight:400;font-size:12px">Stanford 表</span>']]);
+ runNomo();}
+// 病人資料自動篩選（可由資料判斷者）
+function screen(){
+ const P=patient();if(!P)return null;
+ const htm=+$('ht').value/100,bmi=P.tbw/(htm*htm),r=[];
+ if(P.age>80)r.push('年齡 >80 歲');
+ if(bmi>=35)r.push('BMI '+f(bmi)+'（≥35，肥胖）');
+ if(P.crcl<20)r.push('CrCl '+f(P.crcl,0)+' mL/min（<20）');
+ return{bmi,r};}
+const MANUAL=['腹水、全身水腫（anasarca）','燒傷 >20% TBSA','Cystic fibrosis','中樞神經感染','心內膜炎（含 G(+) synergy）','嗜中性球低下','懷孕','嚴重敗血症','腎功能不穩定','血液透析／CRRT'];
+let modeTouched=false;
+function applyScreen(){
+ const S=screen();let html='';
+ if(!S){html='<div class="note">輸入病人資料後會自動篩選是否適合延長間隔給藥（EID）。</div>';}
+ else{
+  if(!modeTouched){document.querySelector(`input[name=mode][value=${S.r.length?'trad':'eid'}]`).checked=true;}
+  html=S.r.length?`<div class="flag f-bad"><b>不適合 EID（依病人資料）：</b>${S.r.join('、')}。${isEID()?'目前已手動選擇 EID，請確認。':'已預設傳統分次給藥。'}</div>`
+   :`<div class="flag f-ok">病人資料未發現不適合 EID 的情形（年齡、BMI ${f(S.bmi)}、CrCl ${f(patient().crcl,0)}）${isEID()?'，已預設 EID。':'。'}</div>`;
+ }
+ html+=`<div class="flag f-warn"><b>⚠ 以下情況不適用 EID，應改用傳統分次給藥：</b><ul style="margin:6px 0 0;padding-left:20px;columns:2;column-gap:24px">${MANUAL.map(x=>`<li>${x}</li>`).join('')}</ul></div>`;
+ $('screen').innerHTML=html;}
+const isEID=()=>document.querySelector('input[name=mode]:checked').value==='eid';
+function applyMode(){applyScreen();const e=isEID();
+ document.querySelectorAll('.popOnly').forEach(x=>x.style.display=curPage==='pt'?'none':'');
+ $('eidCard').style.display=e?'':'none';$('tradAll').style.display=e?'none':'';
+ $('patCard').style.display=(!e&&curPage==='pt')?'none':'';
+ 
+ }
+function run(){applyMode();if(isEID()){runEID();return;}if(curPage==='init'&&computed)runInit();if(curPage==='pt'&&computedPT)runPT();}
+
+document.querySelectorAll('.nav button').forEach(b=>b.onclick=()=>{
+ document.querySelectorAll('.nav button').forEach(x=>x.classList.remove('on'));b.classList.add('on');
+ curPage=b.dataset.p;document.querySelectorAll('.page').forEach(p=>p.classList.toggle('on',p.id==='page-'+curPage));run();});
+['doseAlt','tau','q_ndose','q_ntau'].forEach(id=>$(id).addEventListener('input',()=>$(id).dataset.touched=1));
+['gpk','gtr','drug','tgt'].forEach(id=>$(id).addEventListener('input',()=>{['doseAlt','tau','q_ndose','q_ntau'].forEach(k=>delete $(k).dataset.touched);}));
+$('drug').addEventListener('change',()=>{fillTargets();run();});
+$('tgt').addEventListener('change',()=>{setTargets();run();});
+['q_h0','q_h1','q_h2','q_h3','e_h0','e_h1'].forEach(id=>$(id).addEventListener('input',e=>{const v=e.target.value.replace(/[^\d:]/g,'');
+ e.target.value=(/^\d{4}$/.test(v))?v.slice(0,2)+':'+v.slice(2):v;}));
+document.querySelectorAll('input[name=mode]').forEach(e=>e.addEventListener('input',()=>{modeTouched=true;}));
+document.querySelectorAll('input,select').forEach(e=>e.addEventListener('input',run));
+run();
+window.addEventListener('resize',run);
+['q_d0','q_d1','q_d2','q_d3','e_d0','e_d1'].forEach(id=>$(id).value=today());
+fillTargets();
+</script>
+</body></html>
