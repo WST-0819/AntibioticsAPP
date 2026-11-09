@@ -475,9 +475,9 @@ button.rpt{background:var(--ok)}
 <div class="card">
   <h2>病人資料（血液透析）</h2>
   <div class="grid">
-    <div><label>年齡（產出建議用）</label><input id="d_age" type="number" step="1"></div>
-    <div><label>身高（產出建議用）</label><div style="display:flex;gap:6px"><input id="d_ht" type="number" step="0.1"><span class="unit">cm</span></div></div>
-    <div><label>體重（乾體重）</label><div style="display:flex;gap:6px"><input id="d_wt" type="number" step="0.1"><span class="unit">kg</span></div></div>
+    <div><label>年齡</label><input id="d_age" type="number" step="1"></div>
+    <div><label>身高</label><div style="display:flex;gap:6px"><input id="d_ht" type="number" step="0.1"><span class="unit">cm</span></div></div>
+    <div><label>體重</label><div style="display:flex;gap:6px"><input id="d_wt" type="number" step="0.1"><span class="unit">kg</span></div></div>
     <div><label>感染類型（洗腎前 trough 目標）</label>
       <select id="d_goal"><option value="mild">UTI、SSTI（10–15 mg/L）</option><option value="sev" selected>嚴重感染（18.6–23 mg/L）</option></select></div>
   </div>
@@ -1232,14 +1232,14 @@ Suggestion
 1.{建議方案}
 2.Follow trough at {抽血時間}.`,
 hd_init:`Impression & Assessment
-1.{年齡} y/o, Ht {身高} cm, dry BW {體重} kg, on hemodialysis, admitted due to ${BL}
+1.{年齡} y/o, Ht {身高} cm, BW {體重} kg, on hemodialysis, admitted due to ${BL}
 2.Target：pre-dialysis trough {目標Trough} mg/L.
 
 Suggestion
 1.{建議方案}
 2.Follow pre-dialysis trough after 2–3 maintenance doses at {抽血時間}.`,
 hd_adj:`Impression & Assessment
-1.{年齡} y/o, Ht {身高} cm, dry BW {體重} kg, on hemodialysis, admitted due to ${BL}
+1.{年齡} y/o, Ht {身高} cm, BW {體重} kg, on hemodialysis, admitted due to ${BL}
 2.Vancomycin {目前劑量} mg after each HD, pre-dialysis trough {目前Trough} mg/L ({檢驗日期}).
 3.Target：pre-dialysis trough {目標Trough} mg/L.
 
