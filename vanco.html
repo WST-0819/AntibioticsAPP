@@ -1104,7 +1104,7 @@ function specKidAdj(){
 /* 透析病人負荷劑量（20–25 mg/kg ST，max 3 g，以 250 mg 為單位） */
 function ldRows(wt){
   const lo=Math.min(20*wt,3000), hi=Math.min(25*wt,3000);
-  return [['負荷劑量（20–25 mg/kg ST，max 3 g）',`${R250(lo)}–${R250(hi)}`,'mg（以 250 mg 為單位）']];
+  return [['負荷劑量（20–25 mg/kg ST，max 3 g）',`${R250(lo)}–${R250(hi)}`,'mg']];
 }
 function propAdj(el,dose,tr,lo,hi,unitNote,crit){
   SPEC.hdAdj=null;
@@ -1122,7 +1122,7 @@ function specHD(){
   else{
     SPEC.hd={wt,goal:`${lo}–${hi}`,ldLo:R250(Math.min(20*wt,3000)),ldHi:R250(Math.min(25*wt,3000)),mLo:R50(7.5*wt),mHi:R50(10*wt)};
     tbl('d_res',[['§起始劑量'],...ldRows(wt),
-      ['維持劑量（7.5–10 mg/kg）',`${R50(7.5*wt)}–${R50(10*wt)}`,'mg，每次洗腎後給（以 50 mg 為單位）'],
+      ['維持劑量（7.5–10 mg/kg）',`${R50(7.5*wt)}–${R50(10*wt)}`,'mg'],
       ['目標洗腎前 trough',`${lo}–${hi}`,'mg/L']].map(r=>r.length===1?[r[0]]:r));
     alerts('d_alert',[
       '接受透析的病人一定要給 loading dose。',
