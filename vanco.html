@@ -103,7 +103,7 @@ button.rpt{background:var(--ok)}
 
   <div id="tplView" class="view" style="display:none">
     <div class="opts"><label style="flex:1">模板名稱 <input id="te_name" style="flex:1"></label></div>
-    <div class="tehelp">點下方的項目，會在游標位置插入 <code>{年齡}</code> 這類標記，產出時自動換成計算器上的數值；沒有數值的項目會留空格。其他文字照你輸入的內容輸出。</div>
+    <div class="tehelp">點下方項目會插入 <code>{年齡}</code> 這類標記，產出時換成數值。按鈕格式：<b>項目 [範例]</b>，例如 <code>年齡 [65]</code> 表示插入後會輸出「65」。已計算時括號內顯示本頁目前的數值，<b>[空白]</b> 表示本頁沒有這項資料，插入後會留空格。</div>
     <textarea id="te_text" spellcheck="false" style="min-height:260px"></textarea>
     <div class="toks" id="te_tokens"></div>
     <div class="ft">
@@ -455,6 +455,7 @@ button.rpt{background:var(--ok)}
   <h2>腎功能與起始劑量</h2>
   <div class="two"><div class="scroll"><table id="k_res"></table></div><div class="scroll"><table id="k_tbl"></table></div></div>
   <div id="k_flag"></div><ul class="alerts" id="k_alert"></ul>
+  <div class="btnrow" style="margin:10px 0 0"><button class="rpt" onclick="openReport('kid_init')">📝 產出建議</button></div>
 </div>
 <div class="card">
   <h2>劑量調整（依測得 trough）</h2>
@@ -464,6 +465,7 @@ button.rpt{background:var(--ok)}
     <div><label>測得 trough</label><div style="display:flex;gap:6px"><input id="k_ctr" type="number" step="0.1"><span class="unit">mg/L</span></div></div>
   </div>
   <div id="k_adj" style="margin-top:10px"></div>
+  <div class="btnrow" style="margin:10px 0 0"><button class="rpt" onclick="openReport('kid_adj')">📝 產出建議</button></div>
 </div>
 </div>
 
@@ -481,6 +483,7 @@ button.rpt{background:var(--ok)}
   <h2>起始劑量</h2>
   <div class="scroll"><table id="d_res"></table></div>
   <ul class="alerts" id="d_alert"></ul>
+  <div class="btnrow" style="margin:10px 0 0"><button class="rpt" onclick="openReport('hd_init')">📝 產出建議</button></div>
 </div>
 <div class="card">
   <h2>劑量調整（依洗腎前 trough 等比例校正）</h2>
@@ -489,6 +492,7 @@ button.rpt{background:var(--ok)}
     <div><label>測得洗腎前 trough</label><div style="display:flex;gap:6px"><input id="d_ctr" type="number" step="0.1"><span class="unit">mg/L</span></div></div>
   </div>
   <div id="d_adj" style="margin-top:10px"></div>
+  <div class="btnrow" style="margin:10px 0 0"><button class="rpt" onclick="openReport('hd_adj')">📝 產出建議</button></div>
 </div>
 </div>
 
@@ -1004,6 +1008,7 @@ const R250=x=>Math.round(x/250)*250, R50=x=>Math.round(x/50)*50, R5=x=>Math.roun
 const fx=(x,d=0)=>isFinite(x)?Number(x).toFixed(d):'—';
 const vnum=id=>{const v=parseFloat($(id).value); return isFinite(v)?v:NaN;};
 let SPEC_G='kid';
+const SPEC={kid:null,kidAdj:null,hd:null,hdAdj:null};
 document.querySelectorAll('.nav.sub button').forEach(b=>b.onclick=()=>{
   document.querySelectorAll('.nav.sub button').forEach(x=>x.classList.toggle('on',x===b));
   SPEC_G=b.dataset.g; ['kid','hd'].forEach(g=>$('g-'+g).style.display=g===SPEC_G?'':'none');
@@ -1031,6 +1036,7 @@ function specKid(){
     sel.value = sev ? 15 : 10; sel.dataset.g=String(sev);
   }
   const mgkg=parseFloat(sel.value);
+  SPEC.kid=null;
   if(!(mgkg>0)){ tbl('k_res',[]); $('k_flag').innerHTML='<div class="note" style="color:var(--warn)">請輸入劑量 mg/kg。</div>'; return; }
   const al=[]; let rows=[], tau=NaN, ccr=NaN, K=NaN;
   if(mgkg>15) al.push(`劑量 ${mgkg} mg/kg 超過手冊建議的 10–15 mg/kg。`);
@@ -1062,11 +1068,13 @@ function specKid(){
   al.push('小兒 Ccr 請以 Schwartz 公式計算，勿參考個案紀錄中的 Ccr。');
   al.push('抽血：給藥 4–5 個 dose 後，於給藥前抽 trough（小兒半衰期短，不受全院 08:00–09:00 規範）。');
   alerts('k_alert',al);
+  SPEC.kid={age,sex,ht,wt,scr:noScr?NaN:scr,ccr,mgkg,dose:R5(dose),tau,sev,goal:sev?'15–20':'8–15'};
   specKidAdj(tau);
 }
 /* 小兒調整（依測得 trough；臺大醫院臨床藥事照護手冊） */
 function specKidAdj(){
   const d=vnum('k_cdose'), t=parseFloat($('k_ctau').value), tr=vnum('k_ctr');
+  SPEC.kidAdj=null;
   if(!(d>0&&tr>=0&&$('k_ctr').value!=='')){ $('k_adj').innerHTML='<div class="note">輸入目前劑量與測得 trough 後顯示建議。</div>'; return; }
   const shorter={8:6,12:8,24:12,48:24}[t], longer={6:8,8:12,12:24,24:48}[t];
   const up=R5(d*1.25), dn=R5(d*0.75), up3=R5(d*4/3);
@@ -1079,6 +1087,15 @@ function specKidAdj(){
   else if(tr<=30) h = `停 1 個 dose，並調降 25% 劑量 <b>${dn} mg Q${t}H</b>，或延長間隔 <b>${d} mg Q${longer||t}H</b>`;
   else h = `trough &gt;30 mg/L：文件未列出建議，請停藥並個別評估。`;
   if(tr>20) h += '<br><span style="color:var(--bad)">危急值（非 HD 病人 trough &gt;20 mg/L）</span>';
+  { const sev=$('k_goal').value==='sev', glo=sev?15:8, ghi=sev?20:15, s=shorter||t, l=longer||t, R=(x,q)=>`${x} mg IVD Q${q}H`;
+    const reg = (tr>=glo&&tr<=ghi) ? `Continue vancomycin ${R(d,t)}`
+      : tr<5 ? (t===6?`Increase dose by 1/3 to ${R(up3,6)}`:`Shorten interval to ${R(d,s)}`)
+      : tr<8 ? `Shorten interval to ${R(d,s)}, or increase dose by 25% to ${R(up,t)}`
+      : tr<=15 ? `Increase dose by 25% to ${R(up,t)}, or shorten interval to ${R(d,s)}`
+      : tr<=20 ? `Decrease dose by 25% to ${R(dn,t)}, or extend interval to ${R(d,l)}`
+      : tr<=30 ? `Hold 1 dose, then decrease dose by 25% to ${R(dn,t)}, or extend interval to ${R(d,l)}`
+      : `Hold vancomycin and re-evaluate`;
+    SPEC.kidAdj={d,t,tr,goal:sev?'15–20':'8–15',regimen:reg}; }
   $('k_adj').innerHTML=`<div class="flag ${tr<8?'f-warn':tr<=20?'f-ok':'f-bad'}">測得 trough ${tr} mg/L：${h}</div>`;
 }
 /* 透析病人負荷劑量（20–25 mg/kg ST，max 3 g，以 250 mg 為單位） */
@@ -1087,16 +1104,20 @@ function ldRows(wt){
   return [['負荷劑量（20–25 mg/kg ST，max 3 g）',`${R250(lo)}–${R250(hi)}`,'mg（以 250 mg 為單位）']];
 }
 function propAdj(el,dose,tr,lo,hi,unitNote,crit){
+  SPEC.hdAdj=null;
   if(!(dose>0&&tr>0)){ $(el).innerHTML='<div class="note">輸入目前劑量與測得 trough 後顯示建議。</div>'; return; }
   const mid=(lo+hi)/2, nd=dose*mid/tr;
+  SPEC.hdAdj={d:dose,tr,nd:R50(nd),inRange:tr>=lo&&tr<=hi};
   const st = tr<lo?'f-warn' : tr>hi?'f-bad':'f-ok';
   $(el).innerHTML=`<div class="flag ${st}">測得 ${tr} mg/L（目標 ${lo}–${hi}）→ 新劑量 = 目前劑量 × 理想濃度 ÷ 測得濃度 = ${dose} × ${mid} ÷ ${tr} = <b>${R50(nd)} mg</b> ${unitNote}</div>`
     +(tr>crit?`<div class="note" style="color:var(--bad)">危急值（trough &gt;${crit} mg/L）：預計下次給藥時濃度應落在 10–20 mg/L，請評估停藥時間。</div>`:'');
 }
 function specHD(){
   const wt=vnum('d_wt'), sev=$('d_goal').value==='sev', lo=sev?18.6:10, hi=sev?23:15;
+  SPEC.hd=null;
   if(!(wt>0)){ $('d_res').innerHTML=''; alerts('d_alert',['請輸入體重。']); }
   else{
+    SPEC.hd={wt,goal:`${lo}–${hi}`,ldLo:R250(Math.min(20*wt,3000)),ldHi:R250(Math.min(25*wt,3000)),mLo:R50(7.5*wt),mHi:R50(10*wt)};
     tbl('d_res',[['§起始劑量'],...ldRows(wt),
       ['維持劑量（7.5–10 mg/kg）',`${R50(7.5*wt)}–${R50(10*wt)}`,'mg，每次洗腎後給（以 50 mg 為單位）'],
       ['目標洗腎前 trough',`${lo}–${hi}`,'mg/L']].map(r=>r.length===1?[r[0]]:r));
@@ -1134,17 +1155,22 @@ const TOKENS=[
   ['身高','ht','cm','病人資料'],['體重','bw','kg','病人資料'],
   ['BMI','bmi','','病人資料'],['IBW','ibw','kg','病人資料'],
   ['SCr','scr','mg/dL','病人資料'],['CrCl','crcl','mL/min','病人資料'],
+  ['Ccr(Schwartz)','ccr','mL/min/1.73m²，小兒','病人資料'],
   ['Vd','vd','L','藥動參數'],['Ke','ke','hr⁻¹','藥動參數'],['半衰期','half','hr','藥動參數'],['CL','cl','L/hr','藥動參數'],
   ['目標Trough','target_trough','Goal 設定，如 15–20','藥動參數'],
   ['建議方案','regimen','整句，含負荷劑量／Adjust／Continue','建議劑量'],
   ['負荷劑量','ld','mg，Initial Dosing 頁','建議劑量'],
-  ['維持劑量','dose','mg','建議劑量'],['給藥間隔','tau','小時，如 12','建議劑量'],
+  ['維持劑量','dose','mg','建議劑量'],['單位體重劑量','mgkg','mg/kg/dose，小兒','建議劑量'],['給藥間隔','tau','小時，如 12','建議劑量'],
   ['每日劑量','daily','mg/day','建議劑量'],['輸注速率','rate','mg/hr','建議劑量'],['輸注時間','tinf','hr','建議劑量'],
   ['預估Peak','est_peak','mcg/mL','建議劑量'],['預估Trough','est_trough','mcg/mL','建議劑量'],['預估AUC','est_auc','mg·hr/L','建議劑量'],
   ['濃度紀錄','levels','目前劑量、抽血濃度與推算值（含換行）','血中濃度（TDM 頁）'],
   ['目前劑量','cur_dose','mg','血中濃度（TDM 頁）'],['目前間隔','cur_tau','小時','血中濃度（TDM 頁）'],
   ['目前Trough','cur_trough','推算穩態 trough mcg/mL','血中濃度（TDM 頁）'],['目前AUC','cur_auc','mg·hr/L','血中濃度（TDM 頁）'],
 ];
+const TOK_EX={date:'2026/11/09',age:'65',sex:'male',ht:'170.0',bw:'70.0',bmi:'24.2',ibw:'66.0',scr:'1.00',crcl:'73',ccr:'85',
+  mgkg:'15',vd:'53.0',ke:'0.0665',half:'10.4',cl:'3.52',target_trough:'15–20',regimen:'Vancomycin 1,000 mg IVD Q12H',ld:'1,750',
+  dose:'1,000',tau:'12',daily:'2,000',rate:'1,000',tinf:'1.0',est_peak:'30.1',est_trough:'16.5',est_auc:'568',
+  levels:'（換行）Vancomycin 1,000 mg Q12H, level…',cur_dose:'1,000',cur_tau:'12',cur_trough:'12.3',cur_auc:'450'};
 const TOK_BY_NAME=Object.fromEntries(TOKENS.map(t=>[t[0],t[1]]));
 const TOK_BY_CODE=Object.fromEntries(TOKENS.map(t=>[t[1],t[0]]));
 /* 舊版模板（{age} 這類代碼）自動轉成名稱 */
@@ -1161,12 +1187,77 @@ Suggestion
 1.{建議方案}; estimated trough {預估Trough} mcg/mL, AUC₂₄ {預估AUC} mg·hr/L
 2.Follow trough at HH：MM on MM/DD.`;
 
+const SPEC_TPL={
+kid_init:`Impression & Assessment
+1.{年齡} y/o {性別}, Ht {身高} cm, BW {體重} kg, admitted due to ${BL}
+2.{檢驗日期} SCr {SCr} mg/dL, Ccr (Schwartz) {Ccr(Schwartz)} mL/min/1.73m²
+3.Target：trough {目標Trough} mg/L.
+
+Suggestion
+1.{建議方案}
+2.Follow trough before the 5th dose at HH：MM on MM/DD.`,
+kid_adj:`Impression & Assessment
+1.{年齡} y/o {性別}, BW {體重} kg, admitted due to ${BL}
+2.Vancomycin {目前劑量} mg Q{目前間隔}H, trough {目前Trough} mg/L ({檢驗日期}).
+3.Target：trough {目標Trough} mg/L.
+
+Suggestion
+1.{建議方案}
+2.Follow trough at HH：MM on MM/DD.`,
+hd_init:`Impression & Assessment
+1.Dry BW {體重} kg, on hemodialysis, admitted due to ${BL}
+2.Target：pre-dialysis trough {目標Trough} mg/L.
+
+Suggestion
+1.{建議方案}
+2.Follow pre-dialysis trough after 2–3 maintenance doses on MM/DD.`,
+hd_adj:`Impression & Assessment
+1.Dry BW {體重} kg, on hemodialysis, admitted due to ${BL}
+2.Vancomycin {目前劑量} mg after each HD, pre-dialysis trough {目前Trough} mg/L ({檢驗日期}).
+3.Target：pre-dialysis trough {目標Trough} mg/L.
+
+Suggestion
+1.{建議方案}
+2.Follow pre-dialysis trough on MM/DD.`};
+const isSpec=ctx=>ctx in SPEC_TPL;
+function specVars(ctx){
+  const V={date:($('ro_date').value||'').replace(/-/g,'/')};
+  if(ctx.startsWith('kid')){
+    specCalc(); const k=SPEC.kid;
+    const age=vnum('k_age'), sex=document.querySelector('input[name=k_sex]:checked').value;
+    Object.assign(V,{age:isFinite(age)?String(age):'',sex:sex==='F'?'female':'male',ht:isFinite(vnum('k_ht'))?r(vnum('k_ht'),1):'',
+      bw:isFinite(vnum('k_wt'))?r(vnum('k_wt'),1):'',scr:isFinite(vnum('k_scr'))?r(vnum('k_scr'),2):'',
+      target_trough:$('k_goal').value==='sev'?'15–20':'8–15'});
+    if(ctx==='kid_init'){
+      if(!k) return null;
+      Object.assign(V,{ccr:isFinite(k.ccr)?n0(k.ccr):'',mgkg:String(k.mgkg),dose:n0(k.dose),tau:isFinite(k.tau)?String(k.tau):'',
+        daily:isFinite(k.tau)?n0(k.dose*24/k.tau):''});
+      V.regimen=`Vancomycin ${n0(k.dose)} mg (${k.mgkg} mg/kg) IVD`+(isFinite(k.tau)?` Q${k.tau}H`:'');
+    }else{
+      const a=SPEC.kidAdj; if(!a) return null;
+      Object.assign(V,{cur_dose:n0(a.d),cur_tau:String(a.t),cur_trough:String(a.tr),regimen:a.regimen});
+    }
+    return V;
+  }
+  specCalc(); const h=SPEC.hd; if(!h) return null;
+  Object.assign(V,{bw:r(h.wt,1),target_trough:h.goal});
+  if(ctx==='hd_init'){
+    V.ld=`${n0(h.ldLo)}–${n0(h.ldHi)}`; V.dose=`${n0(h.mLo)}–${n0(h.mHi)}`;
+    V.regimen=`Vancomycin loading dose ${V.ld} mg IVD ST, then ${V.dose} mg IVD after each HD`;
+  }else{
+    const a=SPEC.hdAdj; if(!a) return null;
+    Object.assign(V,{cur_dose:n0(a.d),cur_trough:String(a.tr),dose:n0(a.nd)});
+    V.regimen = a.inRange ? `Continue vancomycin ${n0(a.d)} mg IVD after each HD` : `Adjust vancomycin to ${n0(a.nd)} mg IVD after each HD`;
+  }
+  return V;
+}
 function rptPatient(ctx){
   const order = ctx==='init'?['']:['t_',''];
   for(const p of order) if(patientOK(p)) return base(p);
   return null;
 }
 function reportVars(ctx){
+  if(isSpec(ctx)) return specVars(ctx);
   useRate(ctx);
   if(ctx==='init' && !computed) run();
   const st=S[ctx];
@@ -1226,34 +1317,40 @@ function tplStoreLocal(){
   try{ localStorage.setItem(TPL_KEY,raw); }catch(e){}
   try{ if(window.parent!==window) window.parent.postMessage({type:'vanco-tpl-store',data:raw},'*'); }catch(e){}
 }
+/* 模板選擇依頁面分開記憶：成人三頁共用；特殊族群四種各自記憶 */
+const SELK=()=>isSpec(RPT_CTX)?RPT_CTX:'adult';
+function SEL(){ const k=SELK(); return k==='adult'?(TPL.sel||0):((TPL.selMap||{})[k]||0); }
+function setSel(v){ const k=SELK(); if(k==='adult') TPL.sel=v; else { TPL.selMap=TPL.selMap||{}; TPL.selMap[k]=v; } }
 function curTpl(){
-  if(TPL.sel>0 && TPL.list[TPL.sel-1]) return TPL.list[TPL.sel-1];
-  return {name:'系統預設',text:DEFAULT_TPL};
+  const s=SEL();
+  if(s>0 && TPL.list[s-1]) return TPL.list[s-1];
+  return {name:'系統預設',text:isSpec(RPT_CTX)?SPEC_TPL[RPT_CTX]:DEFAULT_TPL};
 }
 function renderTplSel(){
   $('ro_tpl').innerHTML=['<option value="0">系統預設</option>',
     ...TPL.list.map((t,i)=>`<option value="${i+1}">${t.name.replace(/</g,'&lt;')}</option>`)].join('');
-  $('ro_tpl').value=String(TPL.sel);
+  $('ro_tpl').value=String(SEL());
   $('ro_cloud').innerHTML = TPL.email
     ? `☁ ${TPL.email.replace(/</g,'&lt;')}　<a href="#" onclick="cloudSync('load');return false">切換帳號</a>・<a href="#" onclick="cloudLogout();return false">登出</a>`
     : `<a href="#" onclick="cloudSync('load');return false">以 Google 登入，同步個人模板</a>`;
 }
 function pickTpl(){
-  TPL.sel=+$('ro_tpl').value; TPL.ts=Date.now(); tplStoreLocal(); regenReport();
+  setSel(+$('ro_tpl').value); TPL.ts=Date.now(); tplStoreLocal(); regenReport();
 }
 
 /* ---------- 模板編輯 ---------- */
 let EDIT_IDX=0;   // 0 = 新模板
 function openTplEditor(){
-  const t=curTpl(); EDIT_IDX=TPL.sel;
-  $('te_name').value = TPL.sel>0 ? t.name : '我的模板';
+  const t=curTpl(), S0=SEL(); EDIT_IDX=S0;
+  $('te_name').value = S0>0 ? t.name : '我的模板';
   $('te_text').value = tplMigrate(t.text);
-  $('te_del').style.display = TPL.sel>0 ? '' : 'none';
-  $('te_saveas').style.display = TPL.sel>0 ? '' : 'none';
-  $('te_save').textContent = TPL.sel>0 ? '儲存' : '儲存為新模板';
-  const groups=[...new Set(TOKENS.map(t=>t[3]))];
+  $('te_del').style.display = S0>0 ? '' : 'none';
+  $('te_saveas').style.display = S0>0 ? '' : 'none';
+  $('te_save').textContent = S0>0 ? '儲存' : '儲存為新模板';
+  const groups=[...new Set(TOKENS.map(t=>t[3]))]; let LV=null; try{ LV=reportVars(RPT_CTX); }catch(e){}
   $('te_tokens').innerHTML = groups.map(g=>`<div class="tokg"><b>${g}</b>`+
-    TOKENS.filter(t=>t[3]===g).map(([n,,d])=>`<button class="tok" title="${d}" onclick="insTok('${n}')">${n}${d?`<small>${d}</small>`:''}</button>`).join('')+'</div>').join('');
+    TOKENS.filter(t=>t[3]===g).map(([n,k,d])=>{ let ex=LV?((LV[k]!=null&&String(LV[k]).trim()!=='')?String(LV[k]).trim():'空白'):(TOK_EX[k]||''); if(ex.length>26) ex=ex.slice(0,25)+'…';
+      return `<button class="tok" title="${d}" onclick="insTok('${n}')">${n} [${ex.replace(/</g,'&lt;')}]</button>`; }).join('')+'</div>').join('');
   $('rptView').style.display='none'; $('tplView').style.display='flex';
 }
 function closeTplEditor(){ $('tplView').style.display='none'; $('rptView').style.display='flex'; }
@@ -1268,14 +1365,16 @@ function previewTpl(){
 function saveTpl(asNew){
   const name=$('te_name').value.trim()||'我的模板', text=$('te_text').value;
   if(!text.trim()) return alert('模板內容不能空白。');
-  if(EDIT_IDX>0 && !asNew){ TPL.list[EDIT_IDX-1]={name,text}; TPL.sel=EDIT_IDX; }
-  else { TPL.list.push({name,text}); TPL.sel=TPL.list.length; }
+  if(EDIT_IDX>0 && !asNew){ TPL.list[EDIT_IDX-1]={name,text}; setSel(EDIT_IDX); }
+  else { TPL.list.push({name,text}); setSel(TPL.list.length); }
   TPL.ts=Date.now(); tplStoreLocal(); renderTplSel(); closeTplEditor(); regenReport(true);
   if(TPL.email) cloudSync('save'); else msg('✓ 已存在本機。登入 Google 可跨電腦使用。');
 }
 function delTpl(){
   if(!(EDIT_IDX>0) || !confirm(`刪除模板「${TPL.list[EDIT_IDX-1].name}」？`)) return;
-  TPL.list.splice(EDIT_IDX-1,1); TPL.sel=0; TPL.ts=Date.now();
+  TPL.list.splice(EDIT_IDX-1,1);
+  const sh=v=>v===EDIT_IDX?0:v>EDIT_IDX?v-1:v;
+  TPL.sel=sh(TPL.sel||0); TPL.selMap=Object.fromEntries(Object.entries(TPL.selMap||{}).map(([k,v])=>[k,sh(v)])); TPL.ts=Date.now();
   tplStoreLocal(); renderTplSel(); closeTplEditor(); regenReport(true);
   if(TPL.email) cloudSync('save');
 }
@@ -1363,23 +1462,24 @@ function cloudSync(action){
       if(cloud && Array.isArray(cloud.list)){
         if(!changed && TPL.list.length && JSON.stringify(TPL.list)!==JSON.stringify(cloud.list) && (TPL.ts||0)>(cloud.ts||0)
            && confirm('本機的模板比雲端新，要上傳本機模板覆蓋雲端嗎？\n（取消＝改用雲端模板）')){
-          await driveSave({list:TPL.list,sel:TPL.sel,ts:TPL.ts});
+          await driveSave({list:TPL.list,sel:TPL.sel,selMap:TPL.selMap||{},ts:TPL.ts});
           msg('☁ 已上傳本機模板到雲端');
         }else{
           TPL.list=cloud.list; TPL.ts=cloud.ts||0;
           TPL.sel=(cloud.sel>0&&cloud.sel<=TPL.list.length)?cloud.sel:0;
+          TPL.selMap=Object.fromEntries(Object.entries(cloud.selMap||{}).map(([k,v])=>[k,(v>0&&v<=TPL.list.length)?v:0]));
           msg(`☁ 已載入雲端模板 ${TPL.list.length} 個`);
         }
       }else if(TPL.list.length && !changed){
-        await driveSave({list:TPL.list,sel:TPL.sel,ts:TPL.ts});
+        await driveSave({list:TPL.list,sel:TPL.sel,selMap:TPL.selMap||{},ts:TPL.ts});
         msg('☁ 雲端尚無模板，已上傳本機模板');
       }else{
-        if(changed){ TPL.list=[]; TPL.sel=0; TPL.ts=0; }
+        if(changed){ TPL.list=[]; TPL.sel=0; TPL.selMap={}; TPL.ts=0; }
         msg('☁ 已登入，雲端尚無模板');
       }
       tplStoreLocal(); renderTplSel(); regenReport(true);
     }else{
-      await driveSave({list:TPL.list,sel:TPL.sel,ts:TPL.ts});
+      await driveSave({list:TPL.list,sel:TPL.sel,selMap:TPL.selMap||{},ts:TPL.ts});
       msg('☁ 已儲存到 Google 雲端');
     }
   }).catch(e=>msg('☁ '+e.message,true));
@@ -1388,7 +1488,7 @@ function cloudLogout(){
   if(!confirm('登出會清除這台電腦上的模板副本（雲端仍保留，下次登入即可取回）。確定登出？')) return;
   try{ if(GTOKEN) google.accounts.oauth2.revoke(GTOKEN,()=>{}); }catch(e){}
   GTOKEN=null; GEXP=0;
-  TPL.email=''; TPL.list=[]; TPL.sel=0; TPL.ts=0; tplStoreLocal(); renderTplSel(); regenReport(true); msg('已登出');
+  TPL.email=''; TPL.list=[]; TPL.sel=0; TPL.selMap={}; TPL.ts=0; tplStoreLocal(); renderTplSel(); regenReport(true); msg('已登出');
 }
 
 /* ---------- 視窗 ---------- */
