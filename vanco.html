@@ -1080,19 +1080,19 @@ function specKidAdj(){
   { const sev=$('k_goal').value==='sev', glo=sev?15:8, ghi=sev?20:15, s=shorter||t, l=longer||t, R=(x,q)=>`${x} mg IVD Q${q}H`;
     const reg = (tr>=glo&&tr<=ghi) ? `Continue vancomycin ${R(d,t)}`
       : tr<5 ? (t===6?`Increase dose by 1/3 to ${R(up3,6)}`:`Shorten interval to ${R(d,s)}`)
-      : tr<8 ? `Shorten interval to ${R(d,s)}, or increase dose by 25% to ${R(up,t)}`
-      : tr<=15 ? `Increase dose by 25% to ${R(up,t)}, or shorten interval to ${R(d,s)}`
-      : tr<=20 ? `Decrease dose by 25% to ${R(dn,t)}, or extend interval to ${R(d,l)}`
-      : tr<=30 ? `Hold 1 dose, then decrease dose by 25% to ${R(dn,t)}, or extend interval to ${R(d,l)}`
+      : tr<8 ? (shorter?`Shorten interval to ${R(d,s)}, or increase dose by 25% to ${R(up,t)}`:`Increase dose by 25% to ${R(up,t)}`)
+      : tr<=15 ? `Increase dose by 25% to ${R(up,t)}`+(shorter?`, or shorten interval to ${R(d,s)}`:'')
+      : tr<=20 ? `Decrease dose by 25% to ${R(dn,t)}`+(longer?`, or extend interval to ${R(d,l)}`:'')
+      : tr<=30 ? `Hold 1 dose, then decrease dose by 25% to ${R(dn,t)}`+(longer?`, or extend interval to ${R(d,l)}`:'')
       : `Hold vancomycin and re-evaluate`;
     SPEC.kidAdj={d,t,tr,goal:sev?'15–20':'8–15',regimen:reg};
     const B=(x,q)=>`<b>${x} mg Q${q}H</b>`;
     const h = (tr>=glo&&tr<=ghi) ? `維持 ${B(d,t)}`
       : tr<5 ? (t===6?`增加 1/3：${B(up3,6)}`:`縮短間隔：${B(d,s)}`)
-      : tr<8 ? `縮短間隔：${B(d,s)}，或增加 25%：${B(up,t)}`
-      : tr<=15 ? `增加 25%：${B(up,t)}，或縮短間隔：${B(d,s)}`
-      : tr<=20 ? `調降 25%：${B(dn,t)}，或延長間隔：${B(d,l)}`
-      : tr<=30 ? `停 1 dose 後調降 25%：${B(dn,t)}，或延長間隔：${B(d,l)}`
+      : tr<8 ? (shorter?`縮短間隔：${B(d,s)}，或增加 25%：${B(up,t)}`:`增加 25%：${B(up,t)}`)
+      : tr<=15 ? `增加 25%：${B(up,t)}`+(shorter?`，或縮短間隔：${B(d,s)}`:'')
+      : tr<=20 ? `調降 25%：${B(dn,t)}`+(longer?`，或延長間隔：${B(d,l)}`:'')
+      : tr<=30 ? `停 1 dose 後調降 25%：${B(dn,t)}`+(longer?`，或延長間隔：${B(d,l)}`:'')
       : `停藥，個別評估`;
     const st = tr>=glo&&tr<=ghi ? 'f-ok' : tr<glo ? 'f-warn' : 'f-bad';
     $('k_adj').innerHTML=`<div class="flag ${st}">建議 ${h}（trough ${tr}，目標 ${glo}–${ghi} mg/L）</div>`
