@@ -1045,18 +1045,19 @@ function specKid(){
   if(!(wt>0)){ $('k_res').innerHTML=''; $('k_tbl').innerHTML=''; $('k_flag').innerHTML='<div class="note" style="color:var(--warn)">請輸入體重。</div>'; alerts('k_alert',[]); specKidAdj(NaN); return; }
   if(isFinite(age)&&age>=18) al.push('年齡 ≥18 歲，請改用成人 Initial Dosing。');
   const noScr=!(scr>0);
+  if(isFinite(age)&&age>=0) K=kidK(age,sex,pre);   /* K 值只看年齡、性別、早產 */
   if(noScr){
     tau=6; al.push('無 SCr：Q6H 起始，依 trough 調整。');
   }else{
     if(!(isFinite(age)&&age>=0)) { $('k_flag').innerHTML='<div class="note" style="color:var(--warn)">請輸入年齡（計算 Schwartz K 值）。</div>'; }
     if(!(ht>0)) { $('k_flag').innerHTML='<div class="note" style="color:var(--warn)">請輸入身高（Schwartz 公式需要）。</div>'; }
     if(isFinite(age)&&age>=0&&ht>0){
-      K=kidK(age,sex,pre); ccr=K*ht/scr; tau=kidTau(ccr); $('k_flag').innerHTML='';
+      ccr=K*ht/scr; tau=kidTau(ccr); $('k_flag').innerHTML='';
     }
   }
   const lo=10*wt, hi=15*wt, dose=mgkg*wt;
   rows.push(['§腎功能（Schwartz）']);
-  rows.push(['K 值', isFinite(K)?K:(noScr?'—（無 SCr）':'—'), isFinite(K)?(age<1?(pre?'早產兒 <1 歲':'足月 <1 歲'):(age>12&&sex==='M'?'>12 歲男':'1–12 歲或 >12 歲女')):'']);
+  rows.push(['K 值', isFinite(K)?K:'—', isFinite(K)?(age<1?(pre?'早產兒 <1 歲':'足月 <1 歲'):(age>12&&sex==='M'?'>12 歲男':'1–12 歲或 >12 歲女')):'']);
   rows.push(['Ccr', fx(ccr,0), 'mL/min/1.73m²']);
   rows.push(['§起始劑量']);
     rows.push(['建議劑量', fx(R5(dose),0), 'mg']);
