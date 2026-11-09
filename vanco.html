@@ -1095,7 +1095,7 @@ function specKidAdj(){
       : tr<=30 ? `停 1 dose 後調降 25%：${B(dn,t)}`+(longer?`，或延長間隔：${B(d,l)}`:'')
       : `停藥，個別評估`;
     const st = tr>=glo&&tr<=ghi ? 'f-ok' : tr<glo ? 'f-warn' : 'f-bad';
-    $('k_adj').innerHTML=`<div class="flag ${st}">建議 ${h}（trough ${tr}，目標 ${glo}–${ghi} mg/L）</div>`
+    $('k_adj').innerHTML=`<div class="flag ${st}">建議 ${h}</div>`
       +(tr>20?'<div class="note" style="color:var(--bad)">trough &gt;20 mg/L 危急值</div>':''); }
 }
 /* 透析病人負荷劑量（20–25 mg/kg ST，max 3 g，以 250 mg 為單位） */
@@ -1109,7 +1109,7 @@ function propAdj(el,dose,tr,lo,hi,unitNote,crit){
   const mid=(lo+hi)/2, nd=dose*mid/tr;
   SPEC.hdAdj={d:dose,tr,nd:R50(nd),inRange:tr>=lo&&tr<=hi};
   const st = tr<lo?'f-warn' : tr>hi?'f-bad':'f-ok';
-  $(el).innerHTML=`<div class="flag ${st}">建議 <b>${R50(nd)} mg</b>（trough ${tr}，目標 ${lo}–${hi} mg/L）</div>`
+  $(el).innerHTML=`<div class="flag ${st}">建議 <b>${R50(nd)} mg</b></div>`
     +(tr>crit?`<div class="note" style="color:var(--bad)">trough &gt;${crit} mg/L 危急值</div>`:'');
 }
 function specHD(){
