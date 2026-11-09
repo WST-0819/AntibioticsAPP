@@ -843,7 +843,6 @@ function runInit(){
   alerts('aInit',[
     
     tau>=36?'給藥間隔 >24 小時時，間隔前 24 小時的 AUC 高於後 24 小時。':'',
-    (tau===8 && dose/b.wt>18)?`Q8H 每次 ${r(dose/b.wt,1)} mg/kg（>18），日劑量 ${r(dose*3/b.wt,0)} mg/kg/day，偏高、腎毒性風險增加；可考慮降低每次劑量或延長間隔。`:'',
     dose*(24/tau)>4000?'日劑量 >4 g，通常保留給 <55 歲、>110 kg、CrCl >150 的病人。':'',
     (LD>0&&peakLD>40)?'負荷劑量可能造成 Peak >40 mcg/mL，考慮降低。':'',
     ad.auc>700?'AUC₂₄ 可能 >700，考慮降低每日總劑量。':'',
@@ -1435,7 +1434,6 @@ function renderCompare(ctx){
     const {ti,Cmax,Cmin}=ss(dose,tau,pk.Ke,pk.Vd);
     const a=auc24(dose,tau,pk.Ke,pk.Vd,pk.CL);
     const iss=[];
-    if(tau===8 && dose/wt>18) iss.push('Q8H >18 mg/kg/次');
     if(dose*(24/tau)>4000) iss.push('日劑量 >4 g');
     if(a>700) iss.push('AUC >700');
     if(Cmax>40) iss.push('Peak >40');
