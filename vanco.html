@@ -519,8 +519,8 @@ const REF={
   SRC:'VancoPK calx 公式表',
 };
 const TIPS={
-  'SCr':'Cockcroft-Gault 使用。允許範圍 0.5–10 mg/dL。\nSCr <0.7 mg/dL 時會提示可考慮進位至 0.7（避免高估 CrCl）。\n'+REF.CG,
-  'SCr (mg/dL)':'Cockcroft-Gault 使用，用於族群 Ke 與預測濃度比對。\nSCr <0.7 mg/dL 時會提示可考慮進位至 0.7。\n'+REF.CG,
+  'SCr':'Cockcroft-Gault 使用。允許範圍 0.5–10 mg/dL。\n'+REF.CG,
+  'SCr (mg/dL)':'Cockcroft-Gault 使用，用於族群 Ke 與預測濃度比對。\n'+REF.CG,
   'Actual body weight':'族群 Vd 使用實際體重。\nCrCl 用體重：BMI <25 用實際體重；BMI ≥25 用 AdjBW = IBW + 0.4×(ABW − IBW)。',
   'Actual body weight (kg)':'族群 Vd 使用實際體重。\nCrCl 用體重：BMI <25 用實際體重；BMI ≥25 用 AdjBW = IBW + 0.4×(ABW − IBW)。',
   'AUC₂₄':'目標 AUC₂₄/MIC 400–600 mg·hr/L（假設 MIC = 1 mg/L）。\n2020 共識的建議對象為成人「嚴重 MRSA 感染」：菌血症、心內膜炎、骨髓炎、腦膜炎、肺炎、嚴重皮膚軟組織感染等。非嚴重感染證據不足，共識未作建議。\n'+REF.CON,
@@ -841,7 +841,7 @@ function runInit(){
   $('fInit').innerHTML=flagHTML('init',ad.auc,ad.Cmin);
   $('rateNote').innerHTML = rateAuto()? `自動 ${r(effRate(dose),0)} mg/hr・輸注 ${r(Tinf(dose),1)} hr` : `輸注 ${r(Tinf(dose),1)} hr`;
   alerts('aInit',[
-    b.scrIn<0.7?'SCr <0.7 mg/dL，建議進位至 0.7。':'',
+    
     tau>=36?'給藥間隔 >24 小時時，間隔前 24 小時的 AUC 高於後 24 小時。':'',
     (tau===8 && dose/b.wt>18)?'劑量 >18 mg/kg q8h，考慮降低維持劑量。':'',
     dose*(24/tau)>4000?'日劑量 >4 g，通常保留給 <55 歲、>110 kg、CrCl >150 的病人。':'',
@@ -907,7 +907,7 @@ function calcSST(){
     alerts:[
       mode==='est'?'使用族群 Ke 與 Vd，AUC₂₄ 僅為估計值。':'',
       AUC>700?'目前 AUC₂₄ 可能 >700，考慮降低每日總劑量。':'',
-      (b&&b.scrIn<0.7)?'SCr <0.7 mg/dL，建議進位至 0.7。':'',
+      
       (isFinite(popAtT)&&Math.abs(C-popAtT)>10)?`量測濃度與族群預測值（${r(popAtT,1)} mcg/mL）相差 >10，請確認病人資料。`:'',
     ]};
   run();
@@ -1134,7 +1134,7 @@ const BL='      ';   /* 待填處：以空格呈現 */
 /* [名稱, 內部代碼, 說明, 分組] */
 const TOKENS=[
   ['檢驗日期','date','建議視窗上方的 Lab date','病人資料'],
-  ['年齡','age','歲','病人資料'],['性別','sex','M／F','病人資料'],
+  ['年齡','age','歲','病人資料'],['性別','sex','male／female','病人資料'],
   ['身高','ht','cm','病人資料'],['體重','bw','kg','病人資料'],
   ['BMI','bmi','','病人資料'],['IBW','ibw','kg','病人資料'],
   ['SCr','scr','mg/dL','病人資料'],['CrCl','crcl','mL/min','病人資料'],
@@ -1159,11 +1159,11 @@ const DEFAULT_TPL=`Impression & Assessment
 1.{年齡} y/o {性別}, Ht {身高} cm, BW {體重} kg (BMI {BMI}), admitted due to ${BL}
 2.{檢驗日期} SCr {SCr} mg/dL, CrCl {CrCl} mL/min{濃度紀錄}
 3.Vancomycin PK: Vd {Vd} L, Ke {Ke} hr⁻¹, t½ {半衰期} hr, CL {CL} L/hr
-4.Target: AUC₂₄ 400–600 mg·hr/L, trough {目標Trough} mcg/mL
+4.Target：trough {目標Trough} mcg/mL, AUC₂₄ 400–600 mg·hr/L.
 
 Suggestion
 1.{建議方案}; estimated trough {預估Trough} mcg/mL, AUC₂₄ {預估AUC} mg·hr/L
-2.Follow trough at ${BL} on ${BL}`;
+2.Follow trough at HH：MM on MM/DD.`;
 
 function rptPatient(ctx){
   const order = ctx==='init'?['']:['t_',''];
@@ -1180,12 +1180,12 @@ function reportVars(ctx){
   const s=ss(dose,tau,pk.Ke,pk.Vd), auc=auc24(dose,tau,pk.Ke,pk.Vd,pk.CL);
   const V={};
   V.date=($('ro_date').value||'').replace(/-/g,'/');
-  if(b) Object.assign(V,{age:n0(b.age),sex:b.sex,ht:r(b.htIn*2.54,1),bw:r(b.wt,1),bmi:r(b.bmi,1),ibw:r(b.ibw,1),
+  if(b) Object.assign(V,{age:n0(b.age),sex:b.sex==='F'?'female':'male',ht:r(b.htIn*2.54,1),bw:r(b.wt,1),bmi:r(b.bmi,1),ibw:r(b.ibw,1),
                          scr:r(b.scrIn,2),crcl:r(b.crcl,0),});
   Object.assign(V,{vd:r(pk.Vd,1),ke:r(pk.Ke,4),half:r(0.693/pk.Ke,1),cl:r(pk.CL,2),target_trough:`${g.lo}–${g.hi}`,
     dose:n0(dose),tau:String(tau),tinf:r(s.ti,1),rate:n0(effRate(dose)),daily:n0(dose*24/tau),
     est_peak:r(s.Cmax,1),est_trough:r(s.Cmin,1),est_auc:n0(auc),levels:''});
-  const reg=`${n0(dose)} mg IVD q${tau}h (infuse over ${r(s.ti,1)} hr)`;
+  const reg=`${n0(dose)} mg IVD Q${tau}H`+(dose>2000?` (infuse over ${r(s.ti,1)} hr)`:'');
   if(ctx==='init'){
     const LD=parseFloat($('ld').value);
     V.ld = LD>0 ? n0(LD) : '';
@@ -1195,9 +1195,9 @@ function reportVars(ctx){
     Object.assign(V,{cur_dose:n0(cd),cur_tau:String(ct),cur_trough:r(st.res.trTau,1),cur_auc:n0(st.res.AUC)});
     V.regimen = (cd===dose&&ct===tau) ? `Continue vancomycin ${reg}` : `Adjust vancomycin to ${reg}`;
     V.levels = ctx==='sst'
-      ? `\n   Vancomycin ${n0(cd)} mg q${ct}h, level ${r(num('s_c'),1)} mcg/mL (drawn ${$('s_t').value||BL} hr after start of infusion)`
+      ? `\n   Vancomycin ${n0(cd)} mg Q${ct}H, level ${r(num('s_c'),1)} mcg/mL (drawn ${$('s_t').value||BL} hr after start of infusion)`
         +`\n   → estimated trough ${r(st.res.trTau,1)} mcg/mL, AUC₂₄ ${n0(st.res.AUC)} mg·hr/L`
-      : `\n   Vancomycin ${n0(cd)} mg q${ct}h, peak ${r(num('q_pk'),1)} mcg/mL (${$('q_tpk').value||BL} hr after start), trough ${r(num('q_tr'),1)} mcg/mL`
+      : `\n   Vancomycin ${n0(cd)} mg Q${ct}H, peak ${r(num('q_pk'),1)} mcg/mL (${$('q_tpk').value||BL} hr after start), trough ${r(num('q_tr'),1)} mcg/mL`
         +`\n   → Cmax ${r(ss(cd,ct,pk.Ke,pk.Vd).Cmax,1)}, Cmin ${r(st.res.trTau,1)} mcg/mL, AUC₂₄ ${n0(st.res.AUC)} mg·hr/L`;
   }
   return V;
