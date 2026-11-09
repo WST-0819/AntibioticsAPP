@@ -701,7 +701,7 @@ function suggest(pk,ctx,cap){
   const g=goal(ctx), all=[];
   for(const tau of [8,12,24,36,48]) for(let dose=500;dose<=cap;dose+=250){
     const n=ss(dose,tau,pk.Ke,pk.Vd), auc=auc24(dose,tau,pk.Ke,pk.Vd,pk.CL), daily=dose*24/tau;
-    if(n.Cmax>40||daily>4000) continue;
+    if(daily>4000) continue;
     all.push({dose,tau,auc,Cmin:n.Cmin,
       aucOK:auc>=400&&auc<=600, trOK:n.Cmin>=g.lo&&n.Cmin<=g.hi,
       trD:n.Cmin<g.lo?g.lo-n.Cmin:(n.Cmin>g.hi?n.Cmin-g.hi:0)});
@@ -727,7 +727,7 @@ function troughCandidates(pk,ctx){
     else if(n.Cmin<TLO&&dose<3000){dose+=250;n=ss(dose,tau,Ke,Vd);}
     const daily=dose*24/tau;
     out.push({dose,tau,...n,daily,auc:auc24(dose,tau,Ke,Vd,CL),
-      ok:n.Cmin>=TLO&&n.Cmin<=THI&&n.Cmax<=40&&daily<=4000});
+      ok:n.Cmin>=TLO&&n.Cmin<=THI&&daily<=4000});
   }
   const pref=LN((Vd<=75?35:30)/15)/Ke;
   const okList=out.filter(x=>x.ok);
@@ -740,7 +740,6 @@ function renderCandidates(ctx,el,cand){
     cand.list.map(x=>{
       const isRec=x===cand.rec;
       const tag=x.ok?'<span class="tag t-ok">符合</span>'
-        : x.Cmax>40?'<span class="tag t-bad">Peak >40</span>'
         : x.daily>4000?'<span class="tag t-bad">日劑量 >4 g</span>'
         : '<span class="tag t-bad">未達目標</span>';
       return `<tr class="${isRec&&x.ok?'best':(x.ok?'':'bad')}"><td class="v">${x.dose} mg q${x.tau}h</td>`+
@@ -842,9 +841,7 @@ function runInit(){
   $('rateNote').innerHTML = rateAuto()? `自動 ${r(effRate(dose),0)} mg/hr・輸注 ${r(Tinf(dose),1)} hr` : `輸注 ${r(Tinf(dose),1)} hr`;
   alerts('aInit',[
     
-    tau>=36?'給藥間隔 >24 小時時，間隔前 24 小時的 AUC 高於後 24 小時。':'',
     dose*(24/tau)>4000?'日劑量 >4 g，通常保留給 <55 歲、>110 kg、CrCl >150 的病人。':'',
-    (LD>0&&peakLD>40)?'負荷劑量可能造成 Peak >40 mcg/mL，考慮降低。':'',
     ad.auc>700?'AUC₂₄ 可能 >700，考慮降低每日總劑量。':'',
   ]);
 }
@@ -920,7 +917,7 @@ function showSST(){
   tbl('tSST',res.rows);
   $('fSST').innerHTML=flagHTML('sst',res.AUC,res.trTau,'目前 ');
   const sg=runSuggest('sst',st.pk,'s_cand','s_adopt','fSSTn');
-  alerts('aSST',[...res.alerts, sg.tau>=36?'給藥間隔 >24 小時時，間隔前 24 小時的 AUC 高於後 24 小時。':'']);
+  alerts('aSST',[...res.alerts]);
 }
 
 /* ===================== Steady-State Peak & Trough ===================== */
@@ -975,7 +972,7 @@ function showPT(){
   tbl('tPT',res.rows);
   $('fPT').innerHTML=flagHTML('pt',res.AUC,res.trTau,'目前 ');
   const sg=runSuggest('pt',st.pk,'q_cand','q_adopt','fPTn');
-  alerts('aPT',[...res.alerts, sg.tau>=36?'給藥間隔 >24 小時時，間隔前 24 小時的 AUC 高於後 24 小時。':'']);
+  alerts('aPT',[...res.alerts]);
 }
 
 /* ===== 重設 ===== */
@@ -1436,11 +1433,10 @@ function renderCompare(ctx){
     const iss=[];
     if(dose*(24/tau)>4000) iss.push('日劑量 >4 g');
     if(a>700) iss.push('AUC >700');
-    if(Cmax>40) iss.push('Peak >40');
     const g=goal(ctx);
     const inGoal = a>=400&&a<=600;
     if(Cmin<g.lo) iss.push('Trough 偏低'); else if(Cmin>g.hi) iss.push('Trough 偏高');
-    return {dose,tau,ti,Cmax,Cmin,auc:a,iss,feasible:inGoal&&dose*(24/tau)<=4000&&Cmax<=40};
+    return {dose,tau,ti,Cmax,Cmin,auc:a,iss,feasible:inGoal&&dose*(24/tau)<=4000};
   });
   $(el).innerHTML='<tr><th>方案</th><th>每日總量</th><th>輸注速率</th><th>T_inf</th><th>Peak_ss</th><th>Trough_ss</th><th>AUC₂₄</th><th>評估</th><th></th></tr>'+
     rows.map((x,i)=>{
