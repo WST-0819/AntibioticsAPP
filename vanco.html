@@ -899,7 +899,7 @@ function calcSST(){
   S.sst.pk=pk; S.sst.err='';
   S.sst.res={AUC,trTau,
     rows:[['Vd',r(Vd,1),'L'],['Ke',r(Ke,4),'hr⁻¹'],['Half-life',r(0.693/Ke,1),'hr'],['CLvanco',r(CL,2),'L/hr'],
-      ['推算谷值',r(trTau,1),'mcg/mL'],['目前 AUC₂₄',r(AUC,0),'mg·hr/L']],
+      ['推算 trough',r(trTau,1),'mcg/mL'],['目前 AUC₂₄',r(AUC,0),'mg·hr/L']],
     alerts:[
       mode==='est'?'使用族群 Ke 與 Vd，AUC₂₄ 僅為估計值。':'',
       AUC>700?'目前 AUC₂₄ 可能 >700，考慮降低每日總劑量。':'',
@@ -1143,7 +1143,7 @@ const TOKENS=[
   ['預估Peak','est_peak','mcg/mL','建議劑量'],['預估Trough','est_trough','mcg/mL','建議劑量'],['預估AUC','est_auc','mg·hr/L','建議劑量'],
   ['濃度紀錄','levels','目前劑量、抽血濃度與推算值（含換行）','血中濃度（TDM 頁）'],
   ['目前劑量','cur_dose','mg','血中濃度（TDM 頁）'],['目前間隔','cur_tau','小時','血中濃度（TDM 頁）'],
-  ['目前Trough','cur_trough','推算穩態谷值 mcg/mL','血中濃度（TDM 頁）'],['目前AUC','cur_auc','mg·hr/L','血中濃度（TDM 頁）'],
+  ['目前Trough','cur_trough','推算穩態 trough mcg/mL','血中濃度（TDM 頁）'],['目前AUC','cur_auc','mg·hr/L','血中濃度（TDM 頁）'],
 ];
 const TOK_BY_NAME=Object.fromEntries(TOKENS.map(t=>[t[0],t[1]]));
 const TOK_BY_CODE=Object.fromEntries(TOKENS.map(t=>[t[1],t[0]]));
