@@ -104,6 +104,9 @@ button.rpt{background:var(--ok)}
 @media (max-width:1150px){.rcol .card .two{grid-template-columns:minmax(0,1fr)}}
 #recNote,#s_rec,#q_rec{display:none}
 #tInit tbody,#s_adopt tbody,#q_adopt tbody{grid-template-columns:repeat(3,minmax(0,1fr))}
+/* 主要評估：Peak／Trough／AUC 置頂並強調 */
+#tInit tr:nth-child(2),#tInit tr:nth-child(3),#tInit tr:nth-child(4),#s_adopt tr:nth-child(2),#s_adopt tr:nth-child(3),#s_adopt tr:nth-child(4),#q_adopt tr:nth-child(2),#q_adopt tr:nth-child(3),#q_adopt tr:nth-child(4){background:var(--card);border:2px solid var(--accent2)}
+#tInit tr:nth-child(2) td.v,#tInit tr:nth-child(3) td.v,#tInit tr:nth-child(4) td.v,#s_adopt tr:nth-child(2) td.v,#s_adopt tr:nth-child(3) td.v,#s_adopt tr:nth-child(4) td.v,#q_adopt tr:nth-child(2) td.v,#q_adopt tr:nth-child(3) td.v,#q_adopt tr:nth-child(4) td.v{font-size:22px;color:var(--accent)}
 #fInit,#fSST,#fPT,#fSSTn,#fPTn{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:8px}
 #fInit .flag,#fSST .flag,#fPT .flag,#fSSTn .flag,#fPTn .flag{margin-top:10px}
 .hrow{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
@@ -916,12 +919,12 @@ function adoptedRows(pk,dose,tau){
   const {ti,Cmax,Cmin}=ss(dose,tau,pk.Ke,pk.Vd);
   const a=auc24(dose,tau,pk.Ke,pk.Vd,pk.CL), am=aucMin(dose,tau,pk.Ke,pk.Vd);
   const rows=[
-    ['每日總劑量',r(dose*24/tau,0),'mg/day'],
-    ['輸注速率',r(effRate(dose),0),'mg/hr'],
-    ['輸注時間',r(ti,2),'hr'],
     ['Peak_ss',r(Cmax,1),'mg/L'],
     ['Trough_ss',r(Cmin,1),'mg/L'],
     ['AUC₂₄',r(a,0),'mg·hr/L'],
+    ['每日總劑量',r(dose*24/tau,0),'mg/day'],
+    ['輸注速率',r(effRate(dose),0),'mg/hr'],
+    ['輸注時間',r(ti,2),'hr'],
   ];
   if(isFinite(am)) rows.push(['AUC₂₄ min',r(am,0),'mg·hr/L']);
   return {rows,auc:a,Cmin,Cmax};
