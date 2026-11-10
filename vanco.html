@@ -1042,7 +1042,7 @@ function specKid(){
   SPEC.kid=null;
   if(!(mgkg>0)){ tbl('k_res',[]); $('k_flag').innerHTML='<div class="note" style="color:var(--warn)">請輸入劑量 mg/kg。</div>'; return; }
   const al=[]; let rows=[], tau=NaN, ccr=NaN, K=NaN;
-  if(mgkg>20 || (mgkg>15 && !sev)) al.push(`劑量 ${mgkg} mg/kg/dose 超過 ${sev?'15–20':'10–15'} mg/kg/dose。`);
+  if(mgkg>20) al.push(`劑量 ${mgkg} mg/kg/dose 超過 20 mg/kg/dose。`);
   if(!(wt>0)){ $('k_res').innerHTML=''; $('k_tbl').innerHTML=''; $('k_flag').innerHTML='<div class="note" style="color:var(--warn)">請輸入體重。</div>'; alerts('k_alert',[]); specKidAdj(NaN); return; }
   if(isFinite(age)&&age>=18) al.push('年齡 ≥18 歲，請改用成人 Initial Dosing。');
   const noScr=!(scr>0);
