@@ -88,15 +88,32 @@ button.rpt{background:var(--ok)}
 .qlink{margin-left:6px;font-size:12px;color:var(--accent2)}
 .lcol .grid{grid-template-columns:repeat(2,minmax(0,1fr))}
 @media (max-width:900px){.lay{grid-template-columns:minmax(0,1fr)}.lcol{position:static;max-height:none;overflow:visible}}
-/* PK 參數橫排成一列小卡 */
-#pk{display:block}
-#pk tbody{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px}
-#pk tr:first-child{display:none}
-#pk tr{display:flex;flex-direction:column;background:var(--bg);border-radius:8px;padding:8px 10px}
-#pk td{border:0;padding:0}
-#pk td:first-child{font-size:12px;color:var(--muted)}
-#pk td.v{font-size:18px}
-#pk td:last-child{font-size:11.5px}
+/* 結果表格改成小卡格狀排列 */
+#pk,#tInit,#s_adopt,#q_adopt,#tSST,#tPT{display:block}
+#pk tbody,#tInit tbody,#s_adopt tbody,#q_adopt tbody,#tSST tbody,#tPT tbody{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px}
+#pk tr:first-child,#tInit tr:first-child,#s_adopt tr:first-child,#q_adopt tr:first-child,#tSST tr:first-child,#tPT tr:first-child{display:none}
+#pk tr,#tInit tr,#s_adopt tr,#q_adopt tr,#tSST tr,#tPT tr{display:flex;flex-direction:column;background:var(--bg);border-radius:8px;padding:7px 10px}
+#pk tr.sec,#tInit tr.sec,#s_adopt tr.sec,#q_adopt tr.sec,#tSST tr.sec,#tPT tr.sec{grid-column:1/-1;background:none;padding:2px 0 0}
+#pk td,#tInit td,#s_adopt td,#q_adopt td,#tSST td,#tPT td{border:0;padding:0}
+#pk td:first-child,#tInit td:first-child,#s_adopt td:first-child,#q_adopt td:first-child,#tSST td:first-child,#tPT td:first-child{font-size:12px;color:var(--muted)}
+#pk td.v,#tInit td.v,#s_adopt td.v,#q_adopt td.v,#tSST td.v,#tPT td.v{font-size:17px}
+#pk td:last-child,#tInit td:last-child,#s_adopt td:last-child,#q_adopt td:last-child,#tSST td:last-child,#tPT td:last-child{font-size:11px}
+/* 右欄：劑量卡片改上下排、輸入四欄、判讀並排、比較表與圖並排 */
+.rcol .card .two{grid-template-columns:minmax(0,1fr);gap:10px}
+.rcol .card .two .grid{grid-template-columns:repeat(4,minmax(0,1fr))}
+@media (max-width:700px){.rcol .card .two .grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+#fInit,#fSST,#fPT,#fSSTn,#fPTn{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:8px}
+#fInit .flag,#fSST .flag,#fPT .flag,#fSSTn .flag,#fPTn .flag{margin-top:10px}
+.hrow{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
+.hrow h2{margin-bottom:10px}.hrow .note{margin:0}
+.duo{display:grid;grid-template-columns:repeat(auto-fit,minmax(440px,1fr));gap:14px;align-items:start;margin-bottom:14px}
+.duo .card{margin-bottom:0}
+.duo .cmp{font-size:13px}
+.duo .cmp tr>*:nth-child(2),.duo .cmp tr>*:nth-child(3),.duo .cmp tr>*:nth-child(4){display:none}
+.duo canvas{height:220px}
+.duo .cmp th,.duo .cmp td{padding:6px 6px}
+#tInit tr:nth-child(2) td.v,#s_adopt tr:nth-child(2) td.v,#q_adopt tr:nth-child(2) td.v{font-size:15px;white-space:nowrap}
+.rcol .two .btnrow{align-items:center}
 details.adv{margin-top:12px;border-top:1px dashed var(--line);padding-top:10px}
 details.adv>summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--accent2)}
 .advtag{margin-left:6px;color:var(--warn);font-weight:600}
@@ -236,9 +253,8 @@ details.adv>summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--ac
 </div><div class="rcol">
 
 <div class="card">
-  <h2>Estimated PK Parameters</h2>
+  <div class="hrow"><h2>Estimated PK Parameters</h2><div class="note" id="pkNote"></div></div>
   <div class="scroll"><table id="pk"></table></div>
-  <div class="note" id="pkNote"></div>
 </div>
 
 <div class="card">
@@ -256,8 +272,7 @@ details.adv>summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--ac
             <select id="tau"><option>6</option><option>8</option><option>12</option><option>18</option><option>24</option><option>36</option><option>48</option><option>72</option></select>
             <span class="unit">hrs</span></div></div>
       </div>
-      <div class="btnrow" style="margin:10px 0 0"><button onclick="addCompare('init')">＋ 加入比較</button><button class="rpt" onclick="openReport('init')">📝 產出建議</button></div>
-      <div class="note" id="recNote"></div>
+      <div class="btnrow" style="margin:10px 0 0"><button onclick="addCompare('init')">＋ 加入比較</button><button class="rpt" onclick="openReport('init')">📝 產出建議</button><div class="note" id="recNote" style="margin:0 0 0 6px"></div></div>
     </div>
     <div class="scroll"><table id="tInit"></table></div>
   </div>
@@ -265,8 +280,10 @@ details.adv>summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--ac
   <ul class="alerts" id="aInit"></ul>
 </div>
 
+<div class="duo">
 <div class="card"><h2>給藥方案比較</h2><div class="scroll"><table class="cmp" id="cmp_init"></table></div><div id="cmpNote_init"></div></div>
 <div class="card"><h2>藥動模擬圖</h2><canvas id="chart_init" height="260"></canvas></div>
+</div>
 </div></div>
 </div>
 
@@ -366,16 +383,17 @@ details.adv>summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--ac
             <select id="s_ntau"><option>6</option><option>8</option><option>12</option><option>18</option><option>24</option><option>36</option><option>48</option><option>72</option></select>
             <span class="unit">hrs</span></div></div>
       </div>
-      <div class="btnrow" style="margin:10px 0 0"><button onclick="addCompare('sst')">＋ 加入比較</button><button class="rpt" onclick="openReport('sst')">📝 產出建議</button></div>
-      <div class="note" id="s_rec"></div>
+      <div class="btnrow" style="margin:10px 0 0"><button onclick="addCompare('sst')">＋ 加入比較</button><button class="rpt" onclick="openReport('sst')">📝 產出建議</button><div class="note" id="s_rec" style="margin:0 0 0 6px"></div></div>
     </div>
     <div class="scroll"><table id="s_adopt"></table></div>
   </div>
   <div id="fSSTn"></div>
 </div>
 
+<div class="duo">
 <div class="card"><h2>給藥方案比較</h2><div class="scroll"><table class="cmp" id="cmp_sst"></table></div><div id="cmpNote_sst"></div></div>
 <div class="card"><h2>藥動模擬圖</h2><canvas id="chart_sst" height="260"></canvas></div>
+</div>
 </div></div>
 </div>
 
@@ -447,16 +465,17 @@ details.adv>summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--ac
             <select id="q_ntau"><option>6</option><option>8</option><option>12</option><option>18</option><option>24</option><option>36</option><option>48</option><option>72</option></select>
             <span class="unit">hrs</span></div></div>
       </div>
-      <div class="btnrow" style="margin:10px 0 0"><button onclick="addCompare('pt')">＋ 加入比較</button><button class="rpt" onclick="openReport('pt')">📝 產出建議</button></div>
-      <div class="note" id="q_rec"></div>
+      <div class="btnrow" style="margin:10px 0 0"><button onclick="addCompare('pt')">＋ 加入比較</button><button class="rpt" onclick="openReport('pt')">📝 產出建議</button><div class="note" id="q_rec" style="margin:0 0 0 6px"></div></div>
     </div>
     <div class="scroll"><table id="q_adopt"></table></div>
   </div>
   <div id="fPTn"></div>
 </div>
 
+<div class="duo">
 <div class="card"><h2>給藥方案比較</h2><div class="scroll"><table class="cmp" id="cmp_pt"></table></div><div id="cmpNote_pt"></div></div>
 <div class="card"><h2>藥動模擬圖</h2><canvas id="chart_pt" height="260"></canvas></div>
+</div>
 </div></div>
 </div>
 
