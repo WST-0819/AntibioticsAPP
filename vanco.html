@@ -1111,7 +1111,7 @@ function propAdj(el,dose,tr,lo,hi,unitNote,crit){
   const mid=(lo+hi)/2, nd=dose*mid/tr;
   SPEC.hdAdj={d:dose,tr,nd:R50(nd),inRange:tr>=lo&&tr<=hi};
   const st = tr<lo?'f-warn' : tr>hi?'f-bad':'f-ok';
-  $(el).innerHTML=`<div class="flag ${st}">建議 <b>${R50(nd)} mg post-HD TIW</b></div>`
+  $(el).innerHTML=`<div class="flag ${st}">${tr>=lo&&tr<=hi?'維持':'建議'} <b>${tr>=lo&&tr<=hi?dose:R50(nd)} mg post-HD TIW</b></div>`
     +(tr>crit?`<div class="note" style="color:var(--bad)">trough &gt;${crit} mg/L 危急值</div>`:'');
 }
 function specHD(){
