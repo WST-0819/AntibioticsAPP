@@ -508,7 +508,7 @@ button.rpt{background:var(--ok)}
 </div>
 </div>
 
-<div class="note">依據：本院 Vancomycin TDM 線上藥師操作版（2024.10.24）</div>
+<div class="note" id="specRef">依據：本院 Vancomycin TDM 線上藥師操作版（2024.10.24）</div>
 </div>
 </div>
 
@@ -1028,6 +1028,7 @@ const SPEC={kid:null,kidAdj:null,hd:null,hdAdj:null};
 document.querySelectorAll('.nav.sub button').forEach(b=>b.onclick=()=>{
   document.querySelectorAll('.nav.sub button').forEach(x=>x.classList.toggle('on',x===b));
   SPEC_G=b.dataset.g; ['kid','hd'].forEach(g=>$('g-'+g).style.display=g===SPEC_G?'':'none');
+  $('specRef').textContent = SPEC_G==='kid' ? '調整依據：臺大醫院臨床藥事照護手冊' : '依據：本院 Vancomycin TDM 線上藥師操作版（2024.10.24）';
   specCalc();
 });
 /* 小兒 Schwartz K 值 */
@@ -1125,21 +1126,11 @@ let KID_REC=null, KID_INIT=null;
 function kidEval(){
   const nd=$('k_ndose'), nt=$('k_ntau'), box=$('k_eval'), src=KID_REC||KID_INIT;
   const edited=!!(nd.dataset.touched||nt.dataset.touched);
-  if(!edited){ if(src){ nd.value=src.dose; nt.value=String(src.tau); } else { nd.value=''; } box.innerHTML=''; return; }
-  const d=vnum('k_ndose'), t=parseFloat(nt.value), wt=vnum('k_wt');
-  if(!(d>0)){ box.innerHTML=''; return; }
-  const sev=$('k_goal').value==='sev', glo=sev?15:8, ghi=sev?20:15, msg=[], bad=[], a=SPEC.kidAdj;
-  /* 有測得 trough 時依濃度調整，不再以 mg/kg 下限與 Ccr 間隔判斷 */
-  if(wt>0){ const kg=d/wt; msg.push(`${fx(kg,1)} mg/kg/dose`);
-    if(kg>20) bad.push('超過 20 mg/kg/dose'); else if(kg<10 && !a) bad.push('低於 10 mg/kg/dose'); }
-  const k=SPEC.kid; if(!a && k && isFinite(k.ccr) && isFinite(k.tau) && k.tau!==t) bad.push(`Ccr ${fx(k.ccr,0)} 對應 Q${k.tau}H`);
-  if(a){
-    if(t===a.t){ const est=a.tr*d/a.d; msg.push(`預估 trough ${fx(est,1)} mg/L`);
-      if(est<glo) bad.push(`預估 trough 低於 ${glo}`); else if(est>ghi) bad.push(`預估 trough 高於 ${ghi}`); }
-    else msg.push('間隔變更，trough 無法以比例估算');
-    a.regimen = (d===a.d&&t===a.t) ? `Continue vancomycin ${d} mg IVD Q${t}H` : `Adjust vancomycin to ${d} mg IVD Q${t}H`;
-  }
-  box.innerHTML=`<div class="flag ${bad.length?'f-warn':'f-ok'}">${msg.join('，')}${bad.length?'<br>⚠ '+bad.join('；'):''}</div>`;
+  if(!edited){ if(src){ nd.value=src.dose; nt.value=String(src.tau); } else { nd.value=''; } }
+  const d=vnum('k_ndose'), t=parseFloat(nt.value), wt=vnum('k_wt'), a=SPEC.kidAdj;
+  if(!(d>0&&t>0&&wt>0)){ box.innerHTML=''; return; }
+  if(a && edited) a.regimen = (d===a.d&&t===a.t) ? `Continue vancomycin ${d} mg IVD Q${t}H` : `Adjust vancomycin to ${d} mg IVD Q${t}H`;
+  box.innerHTML=`<div class="flag f-ok">${fx(d*24/t/wt,1)} mg/kg/day</div>`;
 }
 function kidResetNew(){ delete $('k_ndose').dataset.touched; delete $('k_ntau').dataset.touched; specCalc(); }
 ['k_ndose','k_ntau'].forEach(id=>['input','change'].forEach(ev=>$(id).addEventListener(ev,()=>{ $(id).dataset.touched='1'; })));
