@@ -708,7 +708,7 @@ function planInit(Ke,Vd,CLv){
 /* ---- 建議劑量：先符合 AUC 400–600，再以 trough 落在目標範圍、最接近中點者優先 ---- */
 function suggest(pk,ctx,cap){
   const g=goal(ctx), all=[];
-  for(const tau of [8,12,24,36,48]) for(let dose=500;dose<=cap;dose+=250){
+  for(const tau of [6,8,12,24,36,48]) for(let dose=500;dose<=cap;dose+=250){
     const n=ss(dose,tau,pk.Ke,pk.Vd), auc=auc24(dose,tau,pk.Ke,pk.Vd,pk.CL), daily=dose*24/tau;
     if(daily>4000) continue;
     all.push({dose,tau,auc,Cmin:n.Cmin,
@@ -716,7 +716,8 @@ function suggest(pk,ctx,cap){
       trD:n.Cmin<g.lo?g.lo-n.Cmin:(n.Cmin>g.hi?n.Cmin-g.hi:0)});
   }
   if(!all.length) return {dose:500,tau:24};
-  const okA=all.filter(x=>x.aucOK);
+  /* Q6H 只在 Q8H 以上都無法達到 AUC 400–600 時才採用 */
+  const okA8=all.filter(x=>x.aucOK&&x.tau!==6), okA=okA8.length?okA8:all.filter(x=>x.aucOK);
   const pool=okA.length?okA:all;
   pool.sort((a,b)=> okA.length
       ? (a.trD-b.trD) || (Math.abs(a.Cmin-g.mid)-Math.abs(b.Cmin-g.mid)) || (Math.abs(a.auc-500)-Math.abs(b.auc-500))
@@ -727,7 +728,7 @@ function suggest(pk,ctx,cap){
 /* ---- TDM 頁：自動找出 trough 10–20 的改藥方案 ---- */
 function troughCandidates(pk,ctx){
   const {Ke,Vd,CL}=pk, out=[]; const {lo:TLO,hi:THI,mid:TMID}=tgt(ctx);
-  for(const tau of [8,12,24,36,48]){
+  for(const tau of [6,8,12,24,36,48]){
     let d=1000;
     for(let i=0;i<4;i++){ const c=ss(d,tau,Ke,Vd).Cmin; d=d*TMID/c; }
     let dose=Math.min(Math.max(MROUND(d,250),500),3000);
@@ -739,7 +740,7 @@ function troughCandidates(pk,ctx){
       ok:n.Cmin>=TLO&&n.Cmin<=THI&&daily<=4000});
   }
   const pref=LN((Vd<=75?35:30)/15)/Ke;
-  const okList=out.filter(x=>x.ok);
+  const ok8=out.filter(x=>x.ok&&x.tau!==6), okList=ok8.length?ok8:out.filter(x=>x.ok);   /* Q6H 最後才選 */
   const rec=(okList.length?okList:out).slice().sort((a,b)=>
     okList.length? Math.abs(a.tau-pref)-Math.abs(b.tau-pref) : Math.abs(a.Cmin-TMID)-Math.abs(b.Cmin-TMID))[0];
   return {list:out,rec};
