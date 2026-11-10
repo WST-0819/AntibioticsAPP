@@ -104,9 +104,12 @@ button.rpt{background:var(--ok)}
 @media (max-width:1150px){.rcol .card .two{grid-template-columns:minmax(0,1fr)}}
 #recNote,#s_rec,#q_rec{display:none}
 #tInit tbody,#s_adopt tbody,#q_adopt tbody{grid-template-columns:repeat(3,minmax(0,1fr))}
-/* 主要評估：Peak／Trough／AUC 置頂並強調 */
-#tInit tr:nth-child(2),#tInit tr:nth-child(3),#tInit tr:nth-child(4),#s_adopt tr:nth-child(2),#s_adopt tr:nth-child(3),#s_adopt tr:nth-child(4),#q_adopt tr:nth-child(2),#q_adopt tr:nth-child(3),#q_adopt tr:nth-child(4){background:var(--card);border:2px solid var(--accent2)}
-#tInit tr:nth-child(2) td.v,#tInit tr:nth-child(3) td.v,#tInit tr:nth-child(4) td.v,#s_adopt tr:nth-child(2) td.v,#s_adopt tr:nth-child(3) td.v,#s_adopt tr:nth-child(4) td.v,#q_adopt tr:nth-child(2) td.v,#q_adopt tr:nth-child(3) td.v,#q_adopt tr:nth-child(4) td.v{font-size:22px;color:var(--accent)}
+/* 主要評估：Peak／Trough／AUC 置頂並強調，依目標範圍上色 */
+.rcol tr.key{background:var(--card)!important;border:2px solid var(--accent2)}
+.rcol tr.key td.v{font-size:22px;color:var(--accent)}
+.rcol tr.key.st-ok{border-color:var(--ok);background:var(--okbg)!important}.rcol tr.key.st-ok td.v{color:var(--ok)}
+.rcol tr.key.st-warn{border-color:var(--warn);background:var(--warnbg)!important}.rcol tr.key.st-warn td.v{color:var(--warn)}
+.rcol tr.key.st-bad{border-color:var(--bad);background:var(--badbg)!important}.rcol tr.key.st-bad td.v{color:var(--bad)}
 #fInit,#fSST,#fPT,#fSSTn,#fPTn{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:8px}
 #fInit .flag,#fSST .flag,#fPT .flag,#fSSTn .flag,#fPTn .flag{margin-top:10px}
 .hrow{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
@@ -982,7 +985,7 @@ function runInit(){
     peakLD=(LD*(1-EXP(-b.Ke*tiLD)))/(tiLD*b.Ke*(b.Vd*1.25));
     ldRows=[['LD Peak',r(peakLD,1),'mg/L'],['維持劑量開始時濃度',r(peakLD*EXP(-b.Ke*(gap-tiLD)),1),'mg/L']];
   }
-  tbl('tInit',[...ldRows,...ad.rows]);
+  tbl('tInit',[...ad.rows,...ldRows]); keyChips('tInit','init',ad);
   $('fInit').innerHTML=flagHTML('init',ad.auc,ad.Cmin);
   $('rateNote').innerHTML = rateAuto()? `自動 ${r(effRate(dose),0)} mg/hr・輸注 ${r(Tinf(dose),1)} hr` : `輸注 ${r(Tinf(dose),1)} hr`;
   alerts('aInit',[
@@ -994,10 +997,20 @@ function runInit(){
 }
 
 /* 建議劑量區塊（TDM 頁共用） */
+/* Peak／Trough／AUC 小卡依目標範圍上色（Peak 無目標，維持強調色） */
+function keyChips(el,ctx,ad){
+  const g=goal(ctx), st=(v,lo,hi)=>v<lo?'st-warn':v>hi?'st-bad':'st-ok';
+  $(el).querySelectorAll('tr').forEach(tr=>{
+    const k=(tr.cells[0]&&tr.cells[0].textContent||'').trim();
+    if(k==='Peak_ss') tr.className='key';
+    else if(k==='Trough_ss') tr.className='key '+st(ad.Cmin,g.lo,g.hi);
+    else if(/^AUC₂₄(?! min)/.test(k)) tr.className='key '+st(ad.auc,400,600);
+  });
+}
 function runSuggest(ctx,pk,candEl,adoptEl,flagEl){
   const {dose,tau}=syncRegimen(ctx,suggest(pk,ctx,3000));
   const ad=adoptedRows(pk,dose,tau);
-  tbl(adoptEl,ad.rows);
+  tbl(adoptEl,ad.rows); keyChips(adoptEl,ctx,ad);
   $(flagEl).innerHTML=flagHTML(ctx,ad.auc,ad.Cmin,'建議劑量 ');
   return {dose,tau,ad};
 }
