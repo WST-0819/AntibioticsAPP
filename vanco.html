@@ -637,7 +637,7 @@ function base(p=''){
   const crcl = Math.min(((140-age)*w13*w11)/(72*scr), cap);
   const CLv = ((0.75*crcl)+4)*0.06;
   const Vd = 0.29*age + 0.33*wt + 11;
-  const Ke = Math.max(Math.min(CLv/Vd,0.2),0.008);
+  const Ke = Math.max(CLv/Vd,0.008);   /* 不設上限，>0.2 於結果下方警示 */
   return {age,scr,scrIn,htIn,wt,sex,bmi,ibw,w11,crcl,CLv,Vd,Ke,half:0.693/Ke,idmsOn,capped:crcl>=cap-1e-9};
 }
 
@@ -850,6 +850,7 @@ function runInit(){
   $('rateNote').innerHTML = rateAuto()? `自動 ${r(effRate(dose),0)} mg/hr・輸注 ${r(Tinf(dose),1)} hr` : `輸注 ${r(Tinf(dose),1)} hr`;
   alerts('aInit',[
     b.scrIn<0.5?'SCr < 0.5，此計算結果為外推數值，CrCl 可能高估，建議盡早監測濃度。':'',
+    b.Ke>0.2?'預估 t½ < 3.5 hr，可能為 ARC 或 CrCl 高估，建議盡早監測濃度。':'',
     dose*(24/tau)>4000?'日劑量 >4 g，通常保留給 <55 歲、>110 kg、CrCl >150 的病人。':'',
     ad.auc>700?'AUC₂₄ 可能 >700，考慮降低每日總劑量。':'',
   ]);
