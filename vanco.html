@@ -81,10 +81,58 @@ button.rpt{background:var(--ok)}
 .tok{background:var(--bg);color:var(--accent);border:1px solid var(--line);padding:3px 9px;font:13px -apple-system,"Noto Sans TC",sans-serif;border-radius:5px}
 .tok small{font-family:-apple-system,"Noto Sans TC",sans-serif;color:var(--muted);margin-left:5px;font-size:11px}
 .tok:hover{border-color:var(--accent2)}
+/* 雙欄版面：左＝輸入，右＝結果 */
+.wrap.wide{max-width:1500px}
+.lay{display:grid;grid-template-columns:minmax(340px,430px) minmax(0,1fr);gap:14px;align-items:start}
+.lcol{position:sticky;top:8px;max-height:calc(100vh - 16px);overflow:auto}
+.qlink{margin-left:6px;font-size:12px;color:var(--accent2)}
+.lcol .grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+@media (max-width:900px){.lay{grid-template-columns:minmax(0,1fr)}.lcol{position:static;max-height:none;overflow:visible}}
+/* PK 參數橫排成一列小卡 */
+#pk{display:block}
+#pk tbody{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px}
+#pk tr:first-child{display:none}
+#pk tr{display:flex;flex-direction:column;background:var(--bg);border-radius:8px;padding:8px 10px}
+#pk td{border:0;padding:0}
+#pk td:first-child{font-size:12px;color:var(--muted)}
+#pk td.v{font-size:18px}
+#pk td:last-child{font-size:11.5px}
+details.adv{margin-top:12px;border-top:1px dashed var(--line);padding-top:10px}
+details.adv>summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--accent2)}
+.advtag{margin-left:6px;color:var(--warn);font-weight:600}
+.ampsum{font-size:13px;font-weight:600}
+#ampBox{position:fixed;inset:0;z-index:1000;display:none;align-items:center;justify-content:center;background:rgba(15,20,25,.55);padding:16px}
+#ampBox.on{display:flex}
+#ampBox .dlg{background:var(--card);border:1px solid var(--line);border-radius:12px;width:min(640px,100%);max-height:calc(100vh - 32px);overflow:auto;box-shadow:0 20px 50px rgba(0,0,0,.3)}
+#ampBox .hd{display:flex;align-items:center;padding:12px 16px;border-bottom:1px solid var(--line)}
+#ampBox .hd b{flex:1;color:var(--accent)}
+.ampwrap{display:grid;grid-template-columns:220px 1fr;gap:16px;padding:14px 16px}
+@media (max-width:560px){.ampwrap{grid-template-columns:1fr}}
+.ampsvg{width:100%;max-width:220px}
+.ampbody{fill:var(--line)}
+.ampseg{fill:var(--line);stroke:var(--card);stroke-width:2;cursor:pointer}
+.ampseg:hover{fill:#c9d6de}
+.ampseg.cut{fill:var(--bad);opacity:.75}
+.amplbl{font-size:11px;fill:var(--muted)}
+.ampt{font-size:13px;margin:8px 0}
+.ampt th,.ampt td{padding:3px 8px}
+.ampres{font-size:13px;padding:8px 10px;border-radius:6px;background:var(--bg);margin-bottom:6px}
 </style>
 </head>
 <body>
 <div id="tip"></div>
+<div id="ampBox" onclick="if(event.target===this)closeAmp()"><div class="dlg">
+  <div class="hd"><b>截肢部位</b><button class="ghost sm" onclick="closeAmp()">關閉 ✕</button></div>
+  <div class="ampwrap"><div id="ampFig"></div>
+    <div><div class="note" style="margin-top:0">點選部位＝在該處截肢（以下一併計入）；再點一次取消。</div>
+      <table class="ampt"><tr><th>部位</th><th>EBWL</th></tr>
+        <tr><td>手</td><td>0.7%</td></tr><tr><td>前臂（肘下）</td><td>1.5%</td></tr><tr><td>整隻上肢</td><td>4%</td></tr>
+        <tr><td>足</td><td>1.5%</td></tr><tr><td>膝下 BKA</td><td>3.5%</td></tr><tr><td>膝上 AKA</td><td>11%</td></tr><tr><td>髖關節離斷</td><td>16%</td></tr></table>
+      <div class="ampres" id="ampList"></div>
+      <div class="note">截肢 IBW＝(1 − EBWL) × IBW；多處截肢 EBWL 相加。<br>Ref: Osterkamp LK. J Am Diet Assoc 1995;95:215-8；Im EE, et al. Mil Med 2012;177:952-6；<a href="https://clincalc.com/kinetics/ebwl.aspx" target="_blank" rel="noopener">ClinCalc EBWL</a></div>
+    </div></div>
+  <div class="ft" style="display:flex;gap:8px;justify-content:flex-end;padding:0 16px 14px"><button class="ghost" onclick="AMP_SEL={R_arm:null,L_arm:null,R_leg:null,L_leg:null};ampRender()">清除</button><button onclick="applyAmp()">套用</button></div>
+</div></div>
 <div id="rptBox"><div class="dlg">
   <div class="hd"><b>📝 劑量建議</b><button class="ghost sm" onclick="closeReport()">關閉 ✕</button></div>
 
@@ -117,7 +165,7 @@ button.rpt{background:var(--ok)}
   </div>
 </div></div>
 
-<div class="wrap">
+<div class="wrap wide">
 <h1>Vancomycin 計算器</h1>
 
 <div class="nav">
@@ -129,6 +177,7 @@ button.rpt{background:var(--ok)}
 
 <!-- ============================ Initial Dosing ============================ -->
 <div class="page on" id="page-init">
+<div class="lay"><div class="lcol">
 <div class="card">
   <h2>病人資料</h2>
   <div class="grid">
@@ -166,31 +215,25 @@ button.rpt{background:var(--ok)}
     <div><label>Infusion rate</label>
       <div style="display:flex;gap:6px"><input id="rate" type="number" placeholder="自動"><span class="unit">mg/hr</span></div>
       <div class="note" id="rateNote" style="margin-top:4px"></div></div>
-    <div><label>Amputations</label>
-      <select id="amp">
-        <option value="1">None</option>
-        <option value="0.985">Forearm (IBW -1.5%)</option>
-        <option value="0.96">Entire arm (IBW -4%)</option>
-        <option value="0.985">Foot (IBW -1.5%)</option>
-        <option value="0.965">Below knee (IBW -3.5%)</option>
-        <option value="0.89">Above knee (IBW -11%)</option>
-        <option value="0.84">Entire leg (IBW -16%)</option>
-        <option value="0.8">Multiple (IBW -20%)</option>
-        <option value="0.75">Multiple (IBW -25%)</option>
-        <option value="0.7">Multiple (IBW -30%)</option>
-        <option value="0.65">Multiple (IBW -35%)</option>
-      </select></div>
+  </div>
+  <details class="adv"><summary>進階設定<span id="ampAdv" class="advtag"></span></summary>
+  <div class="grid" style="margin-top:10px">
+    <div style="grid-column:1/-1"><label>Amputations <a href="#" class="qlink" onclick="openAmp('amp');return false">查詢</a></label>
+      <span id="ampSum" class="ampsum">無</span>
+      <select id="amp" style="display:none"><option value="1">None</option></select></div>
     <div><label>IDMS SCr</label>
       <div class="radios">
         <label><input type="radio" name="idms" value="1">On</label>
         <label><input type="radio" name="idms" value="0" checked>Off</label>
       </div></div>
+    <div></div>
     <div><label>Slope</label><input id="slope" type="number" step="0.001" value="1.065" disabled></div>
     <div><label>Y-Intercept</label><input id="yint" type="number" step="0.001" value="0.067" disabled></div>
   </div>
 </div>
 
 <div class="btnrow"><button onclick="calc()">計算</button><button class="ghost" onclick="clearPage('init')">重設</button></div>
+</div><div class="rcol">
 
 <div class="card">
   <h2>Estimated PK Parameters</h2>
@@ -224,10 +267,12 @@ button.rpt{background:var(--ok)}
 
 <div class="card"><h2>給藥方案比較</h2><div class="scroll"><table class="cmp" id="cmp_init"></table></div><div id="cmpNote_init"></div></div>
 <div class="card"><h2>藥動模擬圖</h2><canvas id="chart_init" height="260"></canvas></div>
+</div></div>
 </div>
 
 <!-- ============================ Steady-State Trough ============================ -->
 <div class="page" id="page-sst">
+<div class="lay"><div class="lcol">
 <div class="card">
   <h2>病人資料</h2>
   <div class="grid">
@@ -258,28 +303,22 @@ button.rpt{background:var(--ok)}
   <div class="grid">
     <div><label>Infusion rate</label>
       <div style="display:flex;gap:6px"><input id="s_rate" type="number" placeholder="自動"><span class="unit">mg/hr</span></div></div>
-    <div><label>Amputations</label>
-      <select id="t_amp">
-        <option value="1">None</option>
-        <option value="0.985">Forearm (IBW -1.5%)</option>
-        <option value="0.96">Entire arm (IBW -4%)</option>
-        <option value="0.985">Foot (IBW -1.5%)</option>
-        <option value="0.965">Below knee (IBW -3.5%)</option>
-        <option value="0.89">Above knee (IBW -11%)</option>
-        <option value="0.84">Entire leg (IBW -16%)</option>
-        <option value="0.8">Multiple (IBW -20%)</option>
-        <option value="0.75">Multiple (IBW -25%)</option>
-        <option value="0.7">Multiple (IBW -30%)</option>
-        <option value="0.65">Multiple (IBW -35%)</option>
-      </select></div>
+  </div>
+  <details class="adv"><summary>進階設定<span id="t_ampAdv" class="advtag"></span></summary>
+  <div class="grid" style="margin-top:10px">
+    <div style="grid-column:1/-1"><label>Amputations <a href="#" class="qlink" onclick="openAmp('t_amp');return false">查詢</a></label>
+      <span id="t_ampSum" class="ampsum">無</span>
+      <select id="t_amp" style="display:none"><option value="1">None</option></select></div>
     <div><label>IDMS SCr</label>
       <div class="radios">
         <label><input type="radio" name="t_idms" value="1">On</label>
         <label><input type="radio" name="t_idms" value="0" checked>Off</label>
       </div></div>
+    <div></div>
     <div><label>Slope</label><input id="t_slope" type="number" step="0.001" value="1.065" disabled></div>
     <div><label>Y-Intercept</label><input id="t_yint" type="number" step="0.001" value="0.067" disabled></div>
   </div>
+  </details>
 </div>
 
 <div class="card">
@@ -310,10 +349,10 @@ button.rpt{background:var(--ok)}
       <div class="btnrow" style="margin:14px 0 0"><button onclick="calcSST()">計算</button><button class="ghost" onclick="clearPage('sst')">重設</button></div>
       <div class="err" id="s_err"></div>
     </div>
-    <div class="scroll"><table id="tSST"></table></div>
   </div>
-  <div id="fSST"></div><ul class="alerts" id="aSST"></ul>
 </div>
+</div><div class="rcol">
+<div class="card"><h2>推算結果</h2><div class="scroll"><table id="tSST"></table></div><div id="fSST"></div><ul class="alerts" id="aSST"></ul></div>
 
 <div class="card">
   <h2>建議劑量</h2>
@@ -337,10 +376,12 @@ button.rpt{background:var(--ok)}
 
 <div class="card"><h2>給藥方案比較</h2><div class="scroll"><table class="cmp" id="cmp_sst"></table></div><div id="cmpNote_sst"></div></div>
 <div class="card"><h2>藥動模擬圖</h2><canvas id="chart_sst" height="260"></canvas></div>
+</div></div>
 </div>
 
 <!-- ============================ Steady-State Peak & Trough ============================ -->
 <div class="page" id="page-pt">
+<div class="lay"><div class="lcol">
 <div class="card">
   <h2>Goal</h2>
   <div class="grid">
@@ -389,10 +430,10 @@ button.rpt{background:var(--ok)}
       <div class="btnrow" style="margin:14px 0 0"><button onclick="calcPT()">計算</button><button class="ghost" onclick="clearPage('pt')">重設</button></div>
       <div class="err" id="q_err"></div>
     </div>
-    <div class="scroll"><table id="tPT"></table></div>
   </div>
-  <div id="fPT"></div><ul class="alerts" id="aPT"></ul>
 </div>
+</div><div class="rcol">
+<div class="card"><h2>推算結果</h2><div class="scroll"><table id="tPT"></table></div><div id="fPT"></div><ul class="alerts" id="aPT"></ul></div>
 
 <div class="card">
   <h2>建議劑量</h2>
@@ -416,6 +457,7 @@ button.rpt{background:var(--ok)}
 
 <div class="card"><h2>給藥方案比較</h2><div class="scroll"><table class="cmp" id="cmp_pt"></table></div><div id="cmpNote_pt"></div></div>
 <div class="card"><h2>藥動模擬圖</h2><canvas id="chart_pt" height="260"></canvas></div>
+</div></div>
 </div>
 
 <!-- ============================ 特殊族群 ============================ -->
@@ -427,6 +469,7 @@ button.rpt{background:var(--ok)}
 
 <!-- ---------- 小兒 ---------- -->
 <div id="g-kid" style="display:none">
+<div class="lay"><div class="lcol">
 <div class="card">
   <h2>病人資料</h2>
   <div class="grid">
@@ -452,6 +495,7 @@ button.rpt{background:var(--ok)}
   </div>
   <div class="note">嚴重感染可考慮 15–20 mg/kg/dose Q6H（60–80 mg/kg/day，≥3 個月兒童）。Ref: Rybak MJ, et al. Am J Health Syst Pharm 2020;77:835–864（ASHP/IDSA/PIDS/SIDP vancomycin 共識）</div>
 </div>
+</div><div class="rcol">
 <div class="card">
   <h2>腎功能與起始劑量</h2>
   <div class="two"><div class="scroll"><table id="k_res"></table></div><div class="scroll"><table id="k_tbl"></table></div></div>
@@ -477,10 +521,12 @@ button.rpt{background:var(--ok)}
   <div id="k_eval" style="margin-top:10px"></div>
   <div class="btnrow" style="margin:10px 0 0"><button class="rpt" onclick="openReport('kid_adj')">📝 產出建議</button></div>
 </div>
+</div></div>
 </div>
 
 <!-- ---------- HD ---------- -->
 <div id="g-hd">
+<div class="lay"><div class="lcol">
 <div class="card">
   <h2>病人資料</h2>
   <div class="grid">
@@ -491,6 +537,7 @@ button.rpt{background:var(--ok)}
       <select id="d_goal"><option value="mild">UTI、SSTI（10–15 mg/L）</option><option value="sev" selected>嚴重感染（18.6–23 mg/L）</option></select></div>
   </div>
 </div>
+</div><div class="rcol">
 <div class="card">
   <h2>起始劑量</h2>
   <div class="scroll"><table id="d_res"></table></div>
@@ -506,6 +553,7 @@ button.rpt{background:var(--ok)}
   <div id="d_adj" style="margin-top:10px"></div>
   <div class="btnrow" style="margin:10px 0 0"><button class="rpt" onclick="openReport('hd_adj')">📝 產出建議</button></div>
 </div>
+</div></div>
 </div>
 
 <div class="note" id="specRef">依據：本院 Vancomycin TDM 線上藥師操作版（2024.10.24）</div>
@@ -514,6 +562,62 @@ button.rpt{background:var(--ok)}
 
 <script>
 const $=id=>document.getElementById(id);
+/* ===== 截肢部位選擇（人形圖；EBWL 依 Osterkamp 1995 / ClinCalc） ===== */
+const AMP_LV={
+  arm:[['hand','手',0.7],['forearm','前臂（肘下）',1.5],['arm','整隻上肢',4]],
+  leg:[['foot','足',1.5],['bka','膝下 BKA',3.5],['aka','膝上 AKA',11],['hip','髖關節離斷',16]]};
+/* 各層級截掉的區段（遠端以下全部） */
+const AMP_SEG={hand:['hand'],forearm:['forearm','hand'],arm:['upper','forearm','hand'],
+  foot:['foot'],bka:['shin','foot'],aka:['thigh','shin','foot'],hip:['hipcap','thigh','shin','foot']};
+const AMP_CLICK={hand:'hand',forearm:'forearm',upper:'arm',foot:'foot',shin:'bka',thigh:'aka',hipcap:'hip'};
+let AMP_TGT='amp', AMP_SEL={R_arm:null,L_arm:null,R_leg:null,L_leg:null}, AMP_STATE={};
+const ampPct=sel=>Object.entries(sel).reduce((s,[k,v])=>{ if(!v) return s;
+  const lv=AMP_LV[k.endsWith('arm')?'arm':'leg'].find(x=>x[0]===v); return s+(lv?lv[2]:0); },0);
+const ampTxt=sel=>Object.entries(sel).filter(([,v])=>v).map(([k,v])=>{
+  const lv=AMP_LV[k.endsWith('arm')?'arm':'leg'].find(x=>x[0]===v); return `${k[0]==='R'?'右':'左'}${lv[1]} ${lv[2]}%`; }).join('、');
+function ampSVG(){
+  const seg=(side,limb,part,x,y,w,h,r=6)=>`<rect class="ampseg" data-side="${side}" data-limb="${limb}" data-part="${part}" x="${x}" y="${y}" width="${w}" height="${h}" rx="${r}"/>`;
+  const arm=(side,x)=>seg(side,'arm','upper',x,62,18,52)+seg(side,'arm','forearm',x,118,18,50)+seg(side,'arm','hand',x+1,172,16,20,8);
+  const leg=(side,x)=>seg(side,'leg','hipcap',x,146,28,14,4)+seg(side,'leg','thigh',x,162,28,62)+seg(side,'leg','shin',x+2,228,24,58)+seg(side,'leg','foot',x-(side==='R'?6:-6)+2,290,24,12,5);
+  return `<svg viewBox="0 0 200 310" class="ampsvg">
+    <circle cx="100" cy="28" r="20" class="ampbody"/>
+    <rect x="66" y="54" width="68" height="94" rx="12" class="ampbody"/>
+    ${arm('R',44)}${arm('L',138)}${leg('R',70)}${leg('L',102)}
+    <text x="40" y="306" class="amplbl">右 R</text><text x="160" y="306" class="amplbl" text-anchor="end">左 L</text></svg>`;
+}
+function ampRender(){
+  document.querySelectorAll('#ampBox .ampseg').forEach(el=>{
+    const k=el.dataset.side+'_'+el.dataset.limb, lv=AMP_SEL[k];
+    el.classList.toggle('cut', !!lv && AMP_SEG[lv].includes(el.dataset.part));
+  });
+  const pct=ampPct(AMP_SEL);
+  $('ampList').innerHTML = pct ? `${ampTxt(AMP_SEL)}<br><b>合計 EBWL ${+pct.toFixed(1)}%</b>　→ IBW × ${(1-pct/100).toFixed(3)}` : '未選擇（點選圖上部位，截肢處以下會一起標示）';
+}
+function ampClick(el){
+  const k=el.dataset.side+'_'+el.dataset.limb, lv=AMP_CLICK[el.dataset.part];
+  AMP_SEL[k] = AMP_SEL[k]===lv ? null : lv; ampRender();
+}
+function openAmp(tgt){
+  AMP_TGT=tgt; AMP_SEL=Object.assign({R_arm:null,L_arm:null,R_leg:null,L_leg:null},AMP_STATE[tgt]||{});
+  $('ampFig').innerHTML=ampSVG();
+  $('ampFig').querySelectorAll('.ampseg').forEach(el=>{
+    const lv=AMP_CLICK[el.dataset.part], L=AMP_LV[el.dataset.limb].find(x=>x[0]===lv);
+    el.innerHTML=`<title>${L[1]} ${L[2]}%</title>`; el.onclick=()=>ampClick(el); });
+  ampRender(); $('ampBox').classList.add('on');
+}
+function ampSync(){ ['amp','t_amp'].forEach(id=>{ const el=$(id); if(el&&el.value==='1'&&AMP_STATE[id]){ delete AMP_STATE[id];
+  const a=$(id+'Sum'), b=$(id+'Adv'); if(a) a.textContent='無'; if(b) b.textContent=''; } }); }
+function closeAmp(){ $('ampBox').classList.remove('on'); }
+function applyAmp(){
+  AMP_STATE[AMP_TGT]={...AMP_SEL};
+  const pct=ampPct(AMP_SEL), sel=$(AMP_TGT), f=(1-pct/100).toFixed(4);
+  let o=sel.querySelector('option[data-custom]');
+  if(!o){ o=document.createElement('option'); o.dataset.custom='1'; sel.appendChild(o); }
+  o.value=f; o.textContent=pct?ampTxt(AMP_SEL):'None'; sel.value=pct?f:'1';
+  const sum=$(AMP_TGT+'Sum'); if(sum) sum.textContent = pct ? `${ampTxt(AMP_SEL)}（IBW −${+pct.toFixed(1)}%）` : '無';
+  const adv=$(AMP_TGT+'Adv'); if(adv) adv.textContent = pct ? `（截肢 −${+pct.toFixed(1)}%）` : '';
+  closeAmp(); sel.dispatchEvent(new Event('change',{bubbles:true})); if(typeof run==='function') run();
+}
 const num=id=>parseFloat($(id).value);
 const r=(x,d=2)=>(isFinite(x)?x.toFixed(d):"—");
 const MROUND=(x,m)=>Math.round(x/m)*m;
@@ -830,6 +934,7 @@ function dtHours(d1,t1,d2,t2){
 }
 
 function run(){
+  ampSync();
   if(computed) runInit();
   liveSST(); livePT(); showSST(); showPT();
   ['init','sst','pt'].forEach(renderCompare);
@@ -1637,7 +1742,7 @@ function seriesCurve(pk,dose,tau,LD,gap,tEnd){
   return pts;
 }
 function redrawChart(ctx){
-  const c=$('chart_'+ctx), g=c.getContext('2d');
+  const c=$('chart_'+ctx); if(!c) return; const g=c.getContext('2d');
   const st=S[ctx], pk=st.pk;
   if(!pk||!$('page-'+ctx).classList.contains('on')){ g.clearRect(0,0,c.width,c.height); return; }
   useRate(ctx);
