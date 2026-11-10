@@ -1130,7 +1130,8 @@ function kidEval(){
   const d=vnum('k_ndose'), t=parseFloat(nt.value), wt=vnum('k_wt'), a=SPEC.kidAdj;
   if(!(d>0&&t>0&&wt>0)){ box.innerHTML=''; return; }
   if(a && edited) a.regimen = (d===a.d&&t===a.t) ? `Continue vancomycin ${d} mg IVD Q${t}H` : `Adjust vancomycin to ${d} mg IVD Q${t}H`;
-  box.innerHTML=`<div class="flag f-ok">${fx(d*24/t/wt,1)} mg/kg/day</div>`;
+  const kd=d*24/t/wt, hi=kd>80;
+  box.innerHTML=`<div class="flag ${hi?'f-bad':'f-ok'}">${fx(kd,1)} mg/kg/day${hi?'，⚠ 超過 80 mg/kg/day':''}</div>`;
 }
 function kidResetNew(){ delete $('k_ndose').dataset.touched; delete $('k_ntau').dataset.touched; specCalc(); }
 ['k_ndose','k_ntau'].forEach(id=>['input','change'].forEach(ev=>$(id).addEventListener(ev,()=>{ $(id).dataset.touched='1'; })));
