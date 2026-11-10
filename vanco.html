@@ -459,13 +459,22 @@ button.rpt{background:var(--ok)}
   <div class="btnrow" style="margin:10px 0 0"><button class="rpt" onclick="openReport('kid_init')">📝 產出建議</button></div>
 </div>
 <div class="card">
-  <h2>劑量調整</h2>
+  <h2>濃度追蹤</h2>
   <div class="grid">
     <div><label>目前劑量</label><div style="display:flex;gap:6px"><input id="k_cdose" type="number" step="5"><span class="unit">mg</span></div></div>
     <div><label>目前間隔</label><div style="display:flex;gap:6px"><select id="k_ctau"><option>6</option><option>8</option><option>12</option><option>24</option><option>48</option></select><span class="unit">hrs</span></div></div>
     <div><label>測得 trough</label><div style="display:flex;gap:6px"><input id="k_ctr" type="number" step="0.1"><span class="unit">mg/L</span></div></div>
   </div>
   <div id="k_adj" style="margin-top:10px"></div>
+</div>
+<div class="card">
+  <h2>劑量調整</h2>
+  <div class="grid">
+    <div><label>劑量</label><div style="display:flex;gap:6px"><input id="k_ndose" type="number" step="5"><span class="unit">mg</span></div></div>
+    <div><label>間隔</label><div style="display:flex;gap:6px"><select id="k_ntau"><option>6</option><option>8</option><option>12</option><option>24</option><option>48</option></select><span class="unit">hrs</span></div></div>
+    <div style="align-self:end"><button class="ghost sm" onclick="kidResetNew()">↺ 帶回建議</button></div>
+  </div>
+  <div id="k_eval" style="margin-top:10px"></div>
   <div class="btnrow" style="margin:10px 0 0"><button class="rpt" onclick="openReport('kid_adj')">📝 產出建議</button></div>
 </div>
 </div>
@@ -1047,7 +1056,7 @@ function specKid(){
   SPEC.kid=null;
   if(!(mgkg>0)){ tbl('k_res',[]); $('k_flag').innerHTML='<div class="note" style="color:var(--warn)">請輸入劑量 mg/kg。</div>'; return; }
   const al=[]; let rows=[], tau=NaN, ccr=NaN, K=NaN;
-  if(!(wt>0)){ $('k_res').innerHTML=''; $('k_tbl').innerHTML=''; $('k_flag').innerHTML='<div class="note" style="color:var(--warn)">請輸入體重。</div>'; alerts('k_alert',[]); specKidAdj(NaN); return; }
+  if(!(wt>0)){ $('k_res').innerHTML=''; $('k_tbl').innerHTML=''; $('k_flag').innerHTML='<div class="note" style="color:var(--warn)">請輸入體重。</div>'; alerts('k_alert',[]); KID_INIT=null; specKidAdj(NaN); return; }
   if(isFinite(age)&&age>=18) al.push('年齡 ≥18 歲，請改用成人 Initial Dosing。');
   const noScr=!(scr>0);
   if(isFinite(age)&&age>=0) K=kidK(age,sex,pre);   /* K 值只看年齡、性別、早產 */
@@ -1074,13 +1083,14 @@ function specKid(){
     KID_TAU_ROWS.map(([c,t,h])=>`<tr${h===tau&&!noScr?' style="background:var(--okbg);font-weight:600"':''}><td>${c}</td><td>${t}</td></tr>`).join('');
   alerts('k_alert',al);
   SPEC.kid={age,sex,ht,wt,scr:noScr?NaN:scr,ccr,mgkg,dose:R5(dose),tau,sev,goal:sev?'15–20':'8–15'};
+  KID_INIT={dose:R5(dose),tau};
   specKidAdj(tau);
 }
 /* 小兒調整（依測得 trough；臺大醫院臨床藥事照護手冊） */
 function specKidAdj(){
   const d=vnum('k_cdose'), t=parseFloat($('k_ctau').value), tr=vnum('k_ctr');
-  SPEC.kidAdj=null;
-  if(!(d>0&&tr>=0&&$('k_ctr').value!=='')){ $('k_adj').innerHTML=''; return; }
+  SPEC.kidAdj=null; KID_REC=null;
+  if(!(d>0&&tr>=0&&$('k_ctr').value!=='')){ $('k_adj').innerHTML=''; kidEval(); return; }
   const shorter={8:6,12:8,24:12,48:24}[t], longer={6:8,8:12,12:24,24:48}[t];
   const up=R5(d*1.25), dn=R5(d*0.75), up3=R5(d*4/3);
   { const sev=$('k_goal').value==='sev', glo=sev?15:8, ghi=sev?20:15, s=shorter||t, l=longer||t, R=(x,q)=>`${x} mg IVD Q${q}H`;
@@ -1092,6 +1102,11 @@ function specKidAdj(){
       : tr<=30 ? `Hold 1 dose, then decrease dose by 25% to ${R(dn,t)}`+(longer?`, or extend interval to ${R(d,l)}`:'')
       : `Hold vancomycin and re-evaluate`;
     SPEC.kidAdj={d,t,tr,goal:sev?'15–20':'8–15',regimen:reg};
+    KID_REC = (tr>=glo&&tr<=ghi) ? {dose:d,tau:t}
+      : tr<5 ? (t===6?{dose:up3,tau:6}:{dose:d,tau:s})
+      : tr<8 ? (shorter?{dose:d,tau:s}:{dose:up,tau:t})
+      : tr<=15 ? {dose:up,tau:t}
+      : tr<=30 ? {dose:dn,tau:t} : null;
     const B=(x,q)=>`<b>${x} mg Q${q}H</b>`;
     const h = (tr>=glo&&tr<=ghi) ? `維持 ${B(d,t)}`
       : tr<5 ? (t===6?`增加 1/3：${B(up3,6)}`:`縮短間隔：${B(d,s)}`)
@@ -1103,7 +1118,31 @@ function specKidAdj(){
     const st = tr>=glo&&tr<=ghi ? 'f-ok' : tr<glo ? 'f-warn' : 'f-bad';
     $('k_adj').innerHTML=`<div class="flag ${st}">建議 ${h}</div>`
       +(tr>20?'<div class="note" style="color:var(--bad)">trough &gt;20 mg/L 危急值</div>':''); }
+  kidEval();
 }
+/* 劑量調整：預帶建議（濃度追蹤 > 起始劑量）；藥師修改後評估 */
+let KID_REC=null, KID_INIT=null;
+function kidEval(){
+  const nd=$('k_ndose'), nt=$('k_ntau'), box=$('k_eval'), src=KID_REC||KID_INIT;
+  const edited=!!(nd.dataset.touched||nt.dataset.touched);
+  if(!edited){ if(src){ nd.value=src.dose; nt.value=String(src.tau); } else { nd.value=''; } box.innerHTML=''; return; }
+  const d=vnum('k_ndose'), t=parseFloat(nt.value), wt=vnum('k_wt');
+  if(!(d>0)){ box.innerHTML=''; return; }
+  const sev=$('k_goal').value==='sev', glo=sev?15:8, ghi=sev?20:15, msg=[], bad=[], a=SPEC.kidAdj;
+  /* 有測得 trough 時依濃度調整，不再以 mg/kg 下限與 Ccr 間隔判斷 */
+  if(wt>0){ const kg=d/wt; msg.push(`${fx(kg,1)} mg/kg/dose`);
+    if(kg>20) bad.push('超過 20 mg/kg/dose'); else if(kg<10 && !a) bad.push('低於 10 mg/kg/dose'); }
+  const k=SPEC.kid; if(!a && k && isFinite(k.ccr) && isFinite(k.tau) && k.tau!==t) bad.push(`Ccr ${fx(k.ccr,0)} 對應 Q${k.tau}H`);
+  if(a){
+    if(t===a.t){ const est=a.tr*d/a.d; msg.push(`預估 trough ${fx(est,1)} mg/L`);
+      if(est<glo) bad.push(`預估 trough 低於 ${glo}`); else if(est>ghi) bad.push(`預估 trough 高於 ${ghi}`); }
+    else msg.push('間隔變更，trough 無法以比例估算');
+    a.regimen = (d===a.d&&t===a.t) ? `Continue vancomycin ${d} mg IVD Q${t}H` : `Adjust vancomycin to ${d} mg IVD Q${t}H`;
+  }
+  box.innerHTML=`<div class="flag ${bad.length?'f-warn':'f-ok'}">${msg.join('，')}${bad.length?'<br>⚠ '+bad.join('；'):''}</div>`;
+}
+function kidResetNew(){ delete $('k_ndose').dataset.touched; delete $('k_ntau').dataset.touched; specCalc(); }
+['k_ndose','k_ntau'].forEach(id=>['input','change'].forEach(ev=>$(id).addEventListener(ev,()=>{ $(id).dataset.touched='1'; })));
 /* 透析病人負荷劑量（20–25 mg/kg ST，max 3 g，以 250 mg 為單位） */
 function ldRows(wt){
   const lo=Math.min(20*wt,3000), hi=Math.min(25*wt,3000);
