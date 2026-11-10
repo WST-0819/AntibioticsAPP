@@ -526,7 +526,7 @@ const REF={
   SRC:'VancoPK calx 公式表',
 };
 const TIPS={
-  'SCr':'Cockcroft-Gault 使用。允許範圍 0.5–10 mg/dL。\n'+REF.CG,
+  'SCr':'Cockcroft-Gault 使用。<0.5 mg/dL 以實際值外推並顯示警語。\n'+REF.CG,
   'SCr (mg/dL)':'Cockcroft-Gault 使用，用於族群 Ke 與預測濃度比對。\n'+REF.CG,
   'Actual body weight':'族群 Vd 使用實際體重。\nCrCl 用體重：BMI <25 用實際體重；BMI ≥25 用 AdjBW = IBW + 0.4×(ABW − IBW)。',
   'Actual body weight (kg)':'族群 Vd 使用實際體重。\nCrCl 用體重：BMI <25 用實際體重；BMI ≥25 用 AdjBW = IBW + 0.4×(ABW − IBW)。',
@@ -590,7 +590,9 @@ function alerts(el,list){$(el).innerHTML=list.filter(Boolean).map(x=>`<li>${x}</
 /* ===== 基礎參數（T7-T18, W11-W14, ZE25, E26, T35, E28）；p='' Initial、p='t_' Trough 頁 ===== */
 /* 範圍檢查（VancoPK validators：SCr 0.5–10 mg/dL；Height 54–85 inch / 137.16–215.9 cm；Weight 29–275 kg / 64–606 lbs） */
 const RANGE={
-  scr:(v)=> (v>=0.5&&v<=10) ? '' : 'SCr should be between 0.5 and 10 mg/dL',
+  scr:(v,p)=> p===''   /* Initial Dosing：允許 <0.5 外推（下方顯示警語） */
+      ? ((v>0&&v<=10) ? '' : 'SCr should be between 0 and 10 mg/dL')
+      : ((v>=0.5&&v<=10) ? '' : 'SCr should be between 0.5 and 10 mg/dL'),
   ht:(v,p)=> ($(p+'uHt')&&$(p+'uHt').value==='inch')
       ? ((v>=54&&v<=85) ? '' : 'Height should be between 54 and 85 inch')
       : ((v>=137.16&&v<=215.9) ? '' : 'Height should be between 138 and 215 cm'),
@@ -847,7 +849,7 @@ function runInit(){
   $('fInit').innerHTML=flagHTML('init',ad.auc,ad.Cmin);
   $('rateNote').innerHTML = rateAuto()? `自動 ${r(effRate(dose),0)} mg/hr・輸注 ${r(Tinf(dose),1)} hr` : `輸注 ${r(Tinf(dose),1)} hr`;
   alerts('aInit',[
-    
+    b.scrIn<0.5?`SCr ${b.scrIn} mg/dL <0.5：超出 VancoPK 輸入範圍，以實際值外推，CrCl 可能高估，建議盡早監測濃度。`:'',
     dose*(24/tau)>4000?'日劑量 >4 g，通常保留給 <55 歲、>110 kg、CrCl >150 的病人。':'',
     ad.auc>700?'AUC₂₄ 可能 >700，考慮降低每日總劑量。':'',
   ]);
