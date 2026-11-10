@@ -749,7 +749,7 @@ function renderCandidates(ctx,el,cand){
       const tag=x.ok?'<span class="tag t-ok">符合</span>'
         : x.daily>4000?'<span class="tag t-bad">日劑量 >4 g</span>'
         : '<span class="tag t-bad">未達目標</span>';
-      return `<tr class="${isRec&&x.ok?'best':(x.ok?'':'bad')}"><td class="v">${x.dose} mg q${x.tau}h</td>`+
+      return `<tr class="${isRec&&x.ok?'best':(x.ok?'':'bad')}"><td class="v">${x.dose} mg Q${x.tau}H</td>`+
         `<td class="v">${r(x.daily,0)} mg</td><td class="v">${r(x.Cmax,1)}</td><td class="v">${r(x.Cmin,1)}</td>`+
         `<td class="v">${r(x.auc,0)}</td><td>${tag}</td>`+
         `<td><button class="ghost sm" onclick="useCand('${ctx}',${x.dose},${x.tau})">採用</button></td></tr>`;
@@ -770,7 +770,7 @@ function syncRegimen(ctx,rec){
   const [di,ti,ri]=IN[ctx], st=S[ctx];
   if(!st.td) $(di).value=rec.dose;
   if(!st.tt) $(ti).value=rec.tau;
-  $(ri).innerHTML=`系統建議 <b>${rec.dose} mg q${rec.tau}h</b>`
+  $(ri).innerHTML=`系統建議 <b>${rec.dose} mg Q${rec.tau}H</b>`
     +((st.td||st.tt)?'　<span style="color:var(--warn)">目前為手動輸入值</span>':'');
   const dose=num(di)||rec.dose, tau=parseFloat($(ti).value)||rec.tau;
   if(!st.auto){ st.auto=true; if(!st.list.some(x=>x.dose===dose&&x.tau===tau)) st.list.push({dose,tau}); }
@@ -780,7 +780,7 @@ function adoptedRows(pk,dose,tau){
   const {ti,Cmax,Cmin}=ss(dose,tau,pk.Ke,pk.Vd);
   const a=auc24(dose,tau,pk.Ke,pk.Vd,pk.CL), am=aucMin(dose,tau,pk.Ke,pk.Vd);
   const rows=[
-    ['採用方案',`${dose} mg q${tau}h`,''],
+    ['採用方案',`${dose} mg Q${tau}H`,''],
     ['每日總劑量',r(dose*24/tau,0),'mg/day'],
     ['輸注速率',r(effRate(dose),0),'mg/hr'],
     ['輸注時間',r(ti,2),'hr'],
@@ -1103,7 +1103,7 @@ function specKidAdj(){
 /* 透析病人負荷劑量（20–25 mg/kg ST，max 3 g，以 250 mg 為單位） */
 function ldRows(wt){
   const lo=Math.min(20*wt,3000), hi=Math.min(25*wt,3000);
-  return [['負荷劑量（20–25 mg/kg）',`${R250(lo)}–${R250(hi)}`,'mg']];
+  return [['負荷劑量（20–25 mg/kg）',`${R250(lo)}–${R250(hi)}`,'mg ST']];
 }
 function propAdj(el,dose,tr,lo,hi,unitNote,crit){
   SPEC.hdAdj=null;
@@ -1111,7 +1111,7 @@ function propAdj(el,dose,tr,lo,hi,unitNote,crit){
   const mid=(lo+hi)/2, nd=dose*mid/tr;
   SPEC.hdAdj={d:dose,tr,nd:R50(nd),inRange:tr>=lo&&tr<=hi};
   const st = tr<lo?'f-warn' : tr>hi?'f-bad':'f-ok';
-  $(el).innerHTML=`<div class="flag ${st}">建議 <b>${R50(nd)} mg</b></div>`
+  $(el).innerHTML=`<div class="flag ${st}">建議 <b>${R50(nd)} mg post-HD TIW</b></div>`
     +(tr>crit?`<div class="note" style="color:var(--bad)">trough &gt;${crit} mg/L 危急值</div>`:'');
 }
 function specHD(){
@@ -1121,7 +1121,7 @@ function specHD(){
   else{
     SPEC.hd={wt,goal:`${lo}–${hi}`,ldLo:R250(Math.min(20*wt,3000)),ldHi:R250(Math.min(25*wt,3000)),mLo:R50(7.5*wt),mHi:R50(10*wt)};
     tbl('d_res',[['§起始劑量'],...ldRows(wt),
-      ['維持劑量（7.5–10 mg/kg）',`${R50(7.5*wt)}–${R50(10*wt)}`,'mg'],
+      ['維持劑量（7.5–10 mg/kg）',`${R50(7.5*wt)}–${R50(10*wt)}`,'mg post-HD TIW'],
       ['目標 trough',`${lo}–${hi}`,'mg/L']].map(r=>r.length===1?[r[0]]:r));
     alerts('d_alert',[]);
   }
@@ -1235,7 +1235,7 @@ Suggestion
 2.Follow pre-dialysis trough after 2–3 maintenance doses at {抽血時間}.`,
 hd_adj:`Impression & Assessment
 1.{年齡} y/o, Ht {身高} cm, BW {體重} kg, on hemodialysis, admitted due to ${BL}
-2.Vancomycin {目前劑量} mg after each HD, pre-dialysis trough {目前Trough} mg/L ({檢驗日期}).
+2.Vancomycin {目前劑量} mg post-HD TIW, pre-dialysis trough {目前Trough} mg/L ({檢驗日期}).
 3.Target：pre-dialysis trough {目標Trough} mg/L.
 
 Suggestion
@@ -1265,11 +1265,11 @@ function specVars(ctx){
   Object.assign(V,{bw:r(h.wt,1),target_trough:h.goal,age:isFinite(vnum('d_age'))?String(vnum('d_age')):'',ht:isFinite(vnum('d_ht'))?r(vnum('d_ht'),1):''});
   if(ctx==='hd_init'){
     V.ld=`${n0(h.ldLo)}–${n0(h.ldHi)}`; V.dose=`${n0(h.mLo)}–${n0(h.mHi)}`;
-    V.regimen=`Vancomycin loading dose ${V.ld} mg IVD ST, then ${V.dose} mg IVD after each HD`;
+    V.regimen=`Vancomycin loading dose ${V.ld} mg IVD ST, then ${V.dose} mg IVD post-HD TIW`;
   }else{
     const a=SPEC.hdAdj; if(!a) return null;
     Object.assign(V,{cur_dose:n0(a.d),cur_trough:String(a.tr),cur_level:String(a.tr),dose:n0(a.nd)});
-    V.regimen = a.inRange ? `Continue vancomycin ${n0(a.d)} mg IVD after each HD` : `Adjust vancomycin to ${n0(a.nd)} mg IVD after each HD`;
+    V.regimen = a.inRange ? `Continue vancomycin ${n0(a.d)} mg IVD post-HD TIW` : `Adjust vancomycin to ${n0(a.nd)} mg IVD post-HD TIW`;
   }
   return V;
 }
@@ -1574,7 +1574,7 @@ function renderCompare(ctx){
       const tag=!x.feasible?'<span class="tag t-bad">未達目標</span>'
         : x.iss.length?`<span class="tag t-warn">${x.iss[0]}</span>` : '<span class="tag t-ok">適用</span>';
       return `<tr class="${x.feasible&&!x.iss.length?'best':(x.feasible?'':'bad')}">`+
-        `<td class="v">${x.dose} mg q${x.tau}h</td><td class="v">${r(x.dose*24/x.tau,0)} mg</td>`+
+        `<td class="v">${x.dose} mg Q${x.tau}H</td><td class="v">${r(x.dose*24/x.tau,0)} mg</td>`+
         `<td class="v">${r(effRate(x.dose),0)} mg/hr</td><td class="v">${r(x.ti,1)} hr</td>`+
         `<td class="v">${r(x.Cmax,1)}</td><td class="v">${r(x.Cmin,1)}</td><td class="v">${r(x.auc,0)}</td>`+
         `<td>${tag}</td><td><button class="ghost sm" onclick="removeCompare('${ctx}',${i})">移除</button></td></tr>`;
@@ -1633,7 +1633,7 @@ function redrawChart(ctx){
   });
   let lx=pad;
   series.forEach(s=>{
-    const label=`${s.dose} mg q${s.tau}h`;
+    const label=`${s.dose} mg Q${s.tau}H`;
     g.fillStyle=s.color; g.fillRect(lx,H-22,28,8); g.fillStyle=ink; g.fillText(label,lx+36,H-10);
     lx+=36+g.measureText(label).width+30;
   });
