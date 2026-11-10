@@ -99,9 +99,11 @@ button.rpt{background:var(--ok)}
 #pk td.v,#tInit td.v,#s_adopt td.v,#q_adopt td.v,#tSST td.v,#tPT td.v{font-size:17px}
 #pk td:last-child,#tInit td:last-child,#s_adopt td:last-child,#q_adopt td:last-child,#tSST td:last-child,#tPT td:last-child{font-size:11px}
 /* 右欄：劑量卡片改上下排、輸入四欄、判讀並排、比較表與圖並排 */
-.rcol .card .two{grid-template-columns:minmax(0,1fr);gap:10px}
-.rcol .card .two .grid{grid-template-columns:repeat(4,minmax(0,1fr))}
-@media (max-width:700px){.rcol .card .two .grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.rcol .card .two{grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:16px;align-items:start}
+.rcol .card .two .grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+@media (max-width:1150px){.rcol .card .two{grid-template-columns:minmax(0,1fr)}}
+#recNote,#s_rec,#q_rec{display:none}
+#tInit tbody,#s_adopt tbody,#q_adopt tbody{grid-template-columns:repeat(3,minmax(0,1fr))}
 #fInit,#fSST,#fPT,#fSSTn,#fPTn{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:8px}
 #fInit .flag,#fSST .flag,#fPT .flag,#fSSTn .flag,#fPTn .flag{margin-top:10px}
 .hrow{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
@@ -112,7 +114,6 @@ button.rpt{background:var(--ok)}
 .duo .cmp tr>*:nth-child(2),.duo .cmp tr>*:nth-child(3),.duo .cmp tr>*:nth-child(4){display:none}
 .duo canvas{height:220px}
 .duo .cmp th,.duo .cmp td{padding:6px 6px}
-#tInit tr:nth-child(2) td.v,#s_adopt tr:nth-child(2) td.v,#q_adopt tr:nth-child(2) td.v{font-size:15px;white-space:nowrap}
 .rcol .two .btnrow{align-items:center}
 details.adv{margin-top:12px;border-top:1px dashed var(--line);padding-top:10px}
 details.adv>summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--accent2)}
@@ -915,7 +916,6 @@ function adoptedRows(pk,dose,tau){
   const {ti,Cmax,Cmin}=ss(dose,tau,pk.Ke,pk.Vd);
   const a=auc24(dose,tau,pk.Ke,pk.Vd,pk.CL), am=aucMin(dose,tau,pk.Ke,pk.Vd);
   const rows=[
-    ['採用方案',`${dose} mg Q${tau}H`,''],
     ['每日總劑量',r(dose*24/tau,0),'mg/day'],
     ['輸注速率',r(effRate(dose),0),'mg/hr'],
     ['輸注時間',r(ti,2),'hr'],
@@ -1045,7 +1045,6 @@ function calcSST(){
     rows:[['Vd',r(Vd,1),'L'],['Ke',r(Ke,4),'hr⁻¹'],['Half-life',r(0.693/Ke,1),'hr'],['CLvanco',r(CL,2),'L/hr'],
       ['推算 trough',r(trTau,1),'mg/L'],['目前 AUC₂₄',r(AUC,0),'mg·hr/L']],
     alerts:[
-      mode==='est'?'使用族群 Ke 與 Vd，AUC₂₄ 僅為估計值。':'',
       AUC>700?'目前 AUC₂₄ 可能 >700，考慮降低每日總劑量。':'',
       
       (isFinite(popAtT)&&Math.abs(C-popAtT)>10)?`量測濃度與族群預測值（${r(popAtT,1)} mg/L）相差 >10，請確認病人資料。`:'',
