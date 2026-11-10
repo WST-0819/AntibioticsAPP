@@ -448,7 +448,7 @@ button.rpt{background:var(--ok)}
     <div><label>感染類型</label>
       <select id="k_goal"><option value="mild">UTI、SSTI（8–15 mg/L）</option><option value="sev">嚴重感染（15–20 mg/L）</option></select></div>
     <div><label>劑量（10–15 mg/kg/dose）</label><div style="display:flex;gap:6px">
-      <input id="k_mgkg" type="number" step="0.5" value="10"><span class="unit">mg/kg/dose</span></div></div>
+      <input id="k_mgkg" type="number" step="0.5" min="0" max="20" value="10"><span class="unit">mg/kg/dose</span></div></div>
   </div>
   <div class="note">嚴重感染可考慮 15–20 mg/kg/dose Q6H（60–80 mg/kg/day，≥3 個月兒童）。Ref: Rybak MJ, et al. Am J Health Syst Pharm 2020;77:835–864（ASHP/IDSA/PIDS/SIDP vancomycin 共識）</div>
 </div>
@@ -1038,11 +1038,11 @@ function specKid(){
   if(sel.dataset.g!==String(sev)){            // 感染類型改變時預帶劑量（可再自行修改）
     sel.value = sev ? 15 : 10; sel.dataset.g=String(sev);
   }
+  if(parseFloat(sel.value)>20) sel.value=20;   /* 上限 20 mg/kg/dose */
   const mgkg=parseFloat(sel.value);
   SPEC.kid=null;
   if(!(mgkg>0)){ tbl('k_res',[]); $('k_flag').innerHTML='<div class="note" style="color:var(--warn)">請輸入劑量 mg/kg。</div>'; return; }
   const al=[]; let rows=[], tau=NaN, ccr=NaN, K=NaN;
-  if(mgkg>20) al.push(`劑量 ${mgkg} mg/kg/dose 超過 20 mg/kg/dose。`);
   if(!(wt>0)){ $('k_res').innerHTML=''; $('k_tbl').innerHTML=''; $('k_flag').innerHTML='<div class="note" style="color:var(--warn)">請輸入體重。</div>'; alerts('k_alert',[]); specKidAdj(NaN); return; }
   if(isFinite(age)&&age>=18) al.push('年齡 ≥18 歲，請改用成人 Initial Dosing。');
   const noScr=!(scr>0);
@@ -1069,6 +1069,15 @@ function specKid(){
   $('k_tbl').innerHTML='<tr><th>Ccr (mL/min/1.73m²)</th><th>給藥間隔</th></tr>'+
     KID_TAU_ROWS.map(([c,t,h])=>`<tr${h===tau&&!noScr?' style="background:var(--okbg);font-weight:600"':''}><td>${c}</td><td>${t}</td></tr>`).join('');
   alerts('k_alert',al);
+  /* 日劑量警示：2020 ASHP/IDSA/PIDS/SIDP 共識（≥3 個月：60–80 mg/kg/day；≥12 歲：60–70；上限 3,600 mg/day） */
+  if(isFinite(tau)){
+    const dd=R5(dose)*24/tau, dkg=dd/wt, cap=(isFinite(age)&&age>=12)?70:80;
+    const day=[];
+    if(dkg>cap) day.push(`日劑量 ${fx(dkg,0)} mg/kg/day 超過 ${cap} mg/kg/day（${cap===70?'≥12 歲 60–70':'60–80'} mg/kg/day）`);
+    if(dd>3600) day.push(`日劑量 ${fx(dd,0)} mg/day 超過上限 3,600 mg/day`);
+    else if(dd>3000) day.push(`日劑量 ${fx(dd,0)} mg/day >3,000，建議早期監測濃度`);
+    alerts('k_alert',[...al,...day]);
+  }
   SPEC.kid={age,sex,ht,wt,scr:noScr?NaN:scr,ccr,mgkg,dose:R5(dose),tau,sev,goal:sev?'15–20':'8–15'};
   specKidAdj(tau);
 }
