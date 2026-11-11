@@ -730,9 +730,7 @@ function alerts(el,list){$(el).innerHTML=list.filter(Boolean).map(x=>`<li>${x}</
 /* ===== 基礎參數（T7-T18, W11-W14, ZE25, E26, T35, E28）；p='' Initial、p='t_' Trough 頁 ===== */
 /* 範圍檢查（VancoPK validators：SCr 0.5–10 mg/dL；Height 54–85 inch / 137.16–215.9 cm；Weight 29–275 kg / 64–606 lbs） */
 const RANGE={
-  scr:(v,p)=> p===''   /* Initial Dosing：允許 <0.5 外推（下方顯示警語） */
-      ? ((v>0&&v<=10) ? '' : 'SCr should be between 0 and 10 mg/dL')
-      : ((v>=0.5&&v<=10) ? '' : 'SCr should be between 0.5 and 10 mg/dL'),
+  scr:(v)=> (v>0&&v<=10) ? '' : 'SCr should be between 0 and 10 mg/dL',   /* <0.5 允許外推，結果下方顯示警語 */
   ht:(v,p)=> ($(p+'uHt')&&$(p+'uHt').value==='inch')
       ? ((v>=54&&v<=85) ? '' : 'Height should be between 54 and 85 inch')
       : ((v>=137.16&&v<=215.9) ? '' : 'Height should be between 138 and 215 cm'),
@@ -1062,6 +1060,7 @@ function calcSST(){
     rows:[['Vd',r(Vd,1),'L'],['Ke',r(Ke,4),'hr⁻¹'],['Half-life',r(0.693/Ke,1),'hr'],['CLvanco',r(CL,2),'L/hr'],
       ['推算 trough',r(trTau,1),'mg/L'],['目前 AUC₂₄',r(AUC,0),'mg·hr/L']],
     alerts:[
+      (b&&b.scrIn<0.5)?'SCr < 0.5，此計算結果為外推數值，CrCl 可能高估，建議盡早監測濃度。':'',
       AUC>700?'目前 AUC₂₄ 可能 >700，考慮降低每日總劑量。':'',
       
       (isFinite(popAtT)&&Math.abs(C-popAtT)>10)?`量測濃度與族群預測值（${r(popAtT,1)} mg/L）相差 >10，請確認病人資料。`:'',
