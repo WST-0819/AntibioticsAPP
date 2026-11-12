@@ -124,7 +124,11 @@ button.rpt{background:var(--ok)}
 details.adv{margin-top:12px;border-top:1px dashed var(--line);padding-top:10px}
 details.adv>summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--accent2)}
 .advtag{margin-left:6px;color:var(--warn);font-weight:600}
-.ampsum{font-size:13px;font-weight:600}
+.ampfield{display:flex;width:100%;align-items:center;justify-content:space-between;gap:8px;text-align:left;
+  background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font:inherit;font-size:14px;color:var(--text);cursor:pointer}
+.ampfield:hover{border-color:var(--accent2)}
+.ampfield .ampgo{font-size:12px;color:var(--accent2);white-space:nowrap}
+.ampfield.set{background:var(--warnbg);border-color:var(--warn);color:var(--warn);font-weight:600}
 #ampBox{position:fixed;inset:0;z-index:1000;display:none;align-items:center;justify-content:center;background:rgba(15,20,25,.55);padding:16px}
 #ampBox.on{display:flex}
 #ampBox .dlg{background:var(--card);border:1px solid var(--line);border-radius:12px;width:min(640px,100%);max-height:calc(100vh - 32px);overflow:auto;box-shadow:0 20px 50px rgba(0,0,0,.3)}
@@ -239,12 +243,12 @@ details.adv>summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--ac
     <div><label>Infusion rate</label>
       <div style="display:flex;gap:6px"><input id="rate" type="number" placeholder="自動"><span class="unit">mg/hr</span></div>
       <div class="note" id="rateNote" style="margin-top:4px"></div></div>
-  </div>
-  <details class="adv"><summary>進階設定<span id="ampAdv" class="advtag"></span></summary>
-  <div class="grid" style="margin-top:10px">
-    <div style="grid-column:1/-1"><label>Amputations <a href="#" class="qlink" onclick="openAmp('amp');return false">查詢</a></label>
-      <span id="ampSum" class="ampsum">無</span>
+    <div style="grid-column:1/-1"><label>Amputations</label>
+      <button type="button" class="ampfield" id="ampBtn" onclick="openAmp('amp')"><span id="ampSum">無</span><span class="ampgo">選擇部位 ▸</span></button>
       <select id="amp" style="display:none"><option value="1">None</option></select></div>
+  </div>
+  <details class="adv"><summary>進階設定</summary>
+  <div class="grid" style="margin-top:10px">
     <div><label>IDMS SCr</label>
       <div class="radios">
         <label><input type="radio" name="idms" value="1">On</label>
@@ -327,12 +331,12 @@ details.adv>summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--ac
   <div class="grid">
     <div><label>Infusion rate</label>
       <div style="display:flex;gap:6px"><input id="s_rate" type="number" placeholder="自動"><span class="unit">mg/hr</span></div></div>
-  </div>
-  <details class="adv"><summary>進階設定<span id="t_ampAdv" class="advtag"></span></summary>
-  <div class="grid" style="margin-top:10px">
-    <div style="grid-column:1/-1"><label>Amputations <a href="#" class="qlink" onclick="openAmp('t_amp');return false">查詢</a></label>
-      <span id="t_ampSum" class="ampsum">無</span>
+    <div style="grid-column:1/-1"><label>Amputations</label>
+      <button type="button" class="ampfield" id="t_ampBtn" onclick="openAmp('t_amp')"><span id="t_ampSum">無</span><span class="ampgo">選擇部位 ▸</span></button>
       <select id="t_amp" style="display:none"><option value="1">None</option></select></div>
+  </div>
+  <details class="adv"><summary>進階設定</summary>
+  <div class="grid" style="margin-top:10px">
     <div><label>IDMS SCr</label>
       <div class="radios">
         <label><input type="radio" name="t_idms" value="1">On</label>
@@ -632,7 +636,7 @@ function openAmp(tgt){
   ampRender(); $('ampBox').classList.add('on');
 }
 function ampSync(){ ['amp','t_amp'].forEach(id=>{ const el=$(id); if(el&&el.value==='1'&&AMP_STATE[id]){ delete AMP_STATE[id];
-  const a=$(id+'Sum'), b=$(id+'Adv'); if(a) a.textContent='無'; if(b) b.textContent=''; } }); }
+  const a=$(id+'Sum'), b=$(id+'Btn'); if(a) a.textContent='無'; if(b) b.classList.remove('set'); } }); }
 function closeAmp(){ $('ampBox').classList.remove('on'); }
 function applyAmp(){
   AMP_STATE[AMP_TGT]={...AMP_SEL};
@@ -641,7 +645,7 @@ function applyAmp(){
   if(!o){ o=document.createElement('option'); o.dataset.custom='1'; sel.appendChild(o); }
   o.value=f; o.textContent=pct?ampTxt(AMP_SEL):'None'; sel.value=pct?f:'1';
   const sum=$(AMP_TGT+'Sum'); if(sum) sum.textContent = pct ? `${ampTxt(AMP_SEL)}（IBW −${+pct.toFixed(1)}%）` : '無';
-  const adv=$(AMP_TGT+'Adv'); if(adv) adv.textContent = pct ? `（截肢 −${+pct.toFixed(1)}%）` : '';
+  const btn=$(AMP_TGT+'Btn'); if(btn) btn.classList.toggle('set',!!pct);
   closeAmp(); sel.dispatchEvent(new Event('change',{bubbles:true})); if(typeof run==='function') run();
 }
 const num=id=>parseFloat($(id).value);
@@ -1145,7 +1149,7 @@ function clearPage(ctx){
   S[ctx]=newState();
   PAGE_IDS[ctx].forEach(id=>{ $(id).value=''; });
   if(ctx==='init'){
-    computed=false; $('ld').value='0';
+    computed=false; $('ld').value='0'; $('amp').value='1';
     ['pk','tInit','pkNote','recNote','rateNote','fInit','aInit'].forEach(id=>$(id).innerHTML='');
   }
   if(ctx==='sst'){ $('s_mode').value='est'; $('t_amp').value='1'; ['s_d1','s_d2'].forEach(id=>$(id).value=today()); }
