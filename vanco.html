@@ -981,7 +981,7 @@ function runInit(){
     b.scrIn<0.5?'SCr < 0.5，此計算結果為外推數值，CrCl 可能高估，建議盡早監測濃度。':'',
     b.Ke>0.2?'預估 t½ < 3.5 hr，可能為 ARC 或 CrCl 高估，建議盡早監測濃度。':'',
     dose*(24/tau)>4000?'日劑量 >4 g，通常保留給 <55 歲、>110 kg、CrCl >150 的病人。':'',
-    ad.auc>700?'推估 AUC₂₄ >700，建議降低每日總劑量。':'',
+    ad.auc>700?'推估 AUC₂₄ >700，明顯偏高，建議降低每日總劑量。':'',
   ]);
 }
 
@@ -1051,7 +1051,7 @@ function calcSST(){
       ['推算 trough',r(trTau,1),'mg/L'],['目前 AUC₂₄',r(AUC,0),'mg·hr/L']],
     alerts:[
       (b&&b.scrIn<0.5)?'SCr < 0.5，此計算結果為外推數值，CrCl 可能高估，建議盡早監測濃度。':'',
-      AUC>700?'目前推估 AUC₂₄ >700，建議降低每日總劑量。':'',
+      AUC>700?'目前推估 AUC₂₄ >700，明顯偏高，建議降低每日總劑量。':'',
       
       (isFinite(popAtT)&&Math.abs(C-popAtT)>10)?`量測濃度與族群預測值（${r(popAtT,1)} mg/L）相差 >10，請確認病人資料。`:'',
     ]};
@@ -1108,7 +1108,7 @@ function calcPT(){
     rows:[['Ke',r(Ke,4),'hr⁻¹'],['Half-life',r(half,1),'hr'],['Cmax',r(Cmax,1),'mg/L'],['Cmin',r(Cmin,1),'mg/L'],
       ['Vd',r(Vd,1),'L'],['CLvanco',r(CL,2),'L/hr'],['目前 AUC₂₄',r(AUC,0),'mg·hr/L']],
     alerts:[
-      AUC>700?'目前推估 AUC₂₄ >700，建議降低每日總劑量。':'',
+      AUC>700?'目前推估 AUC₂₄ >700，明顯偏高，建議降低每日總劑量。':'',
     ]};
   run();
 }
