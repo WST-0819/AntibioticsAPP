@@ -120,6 +120,9 @@ button.rpt{background:var(--ok)}
 .duo .cmp tr>*:nth-child(2),.duo .cmp tr>*:nth-child(3),.duo .cmp tr>*:nth-child(4){display:none}
 .duo canvas{height:220px}
 .duo .cmp th,.duo .cmp td{padding:6px 6px}
+.cmp td.v .tag{margin-left:4px;font-weight:600}
+@media (min-width:1300px){.duo{grid-template-columns:minmax(0,1.3fr) minmax(0,1fr)}}
+.duo .cmp .tag{font-size:11px;padding:1px 6px}
 .rcol .two .btnrow{align-items:center}
 details.adv{margin-top:12px;border-top:1px dashed var(--line);padding-top:10px}
 details.adv>summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--accent2)}
@@ -1722,27 +1725,20 @@ function renderCompare(ctx){
   const st=S[ctx], pk=st.pk, el='cmp_'+ctx, ne='cmpNote_'+ctx;
   if(!pk||!st.list.length){ $(el).innerHTML=''; $(ne).innerHTML=''; redrawChart(ctx); return; }
   const wt = ctx==='init'?(patientOK('')?base('').wt:NaN):(patientOK('t_')&&ctx==='sst'?base('t_').wt:NaN);
+  const g=goal(ctx);
+  const ev=(v,lo,hi)=> v<lo?'<span class="tag t-warn">未達目標</span>':v>hi?'<span class="tag t-bad">超出目標</span>':'<span class="tag t-ok">達標</span>';
   const rows=st.list.map(({dose,tau})=>{
     const {ti,Cmax,Cmin}=ss(dose,tau,pk.Ke,pk.Vd);
     const a=auc24(dose,tau,pk.Ke,pk.Vd,pk.CL);
-    const iss=[];
-    if(dose*(24/tau)>4000) iss.push('日劑量 >4 g');
-    if(a>700) iss.push('AUC >700');
-    const g=goal(ctx);
-    const inGoal = a>=400&&a<=600;
-    if(Cmin<g.lo) iss.push('Trough 偏低'); else if(Cmin>g.hi) iss.push('Trough 偏高');
-    return {dose,tau,ti,Cmax,Cmin,auc:a,iss,feasible:inGoal&&dose*(24/tau)<=4000};
+    const ok=a>=400&&a<=600&&Cmin>=g.lo&&Cmin<=g.hi, big=dose*(24/tau)>4000;
+    return {dose,tau,ti,Cmax,Cmin,auc:a,ok,big};
   });
-  $(el).innerHTML='<tr><th>方案</th><th>每日總量</th><th>輸注速率</th><th>T_inf</th><th>Peak_ss</th><th>Trough_ss</th><th>AUC₂₄</th><th>評估</th><th></th></tr>'+
-    rows.map((x,i)=>{
-      const tag=!x.feasible?'<span class="tag t-bad">未達目標</span>'
-        : x.iss.length?`<span class="tag t-warn">${x.iss[0]}</span>` : '<span class="tag t-ok">適用</span>';
-      return `<tr class="${x.feasible&&!x.iss.length?'best':(x.feasible?'':'bad')}">`+
-        `<td class="v">${x.dose} mg Q${x.tau}H</td><td class="v">${r(x.dose*24/x.tau,0)} mg</td>`+
+  $(el).innerHTML='<tr><th>方案</th><th>每日總量</th><th>輸注速率</th><th>T_inf</th><th>Peak_ss</th><th>Trough_ss</th><th>AUC₂₄</th><th></th></tr>'+
+    rows.map((x,i)=>`<tr class="${x.ok?'best':''}">`+
+        `<td class="v">${x.dose} mg Q${x.tau}H${x.big?' <span class="tag t-bad">>4 g/day</span>':''}</td><td class="v">${r(x.dose*24/x.tau,0)} mg</td>`+
         `<td class="v">${r(effRate(x.dose),0)} mg/hr</td><td class="v">${r(x.ti,1)} hr</td>`+
-        `<td class="v">${r(x.Cmax,1)}</td><td class="v">${r(x.Cmin,1)}</td><td class="v">${r(x.auc,0)}</td>`+
-        `<td>${tag}</td><td><button class="ghost sm" onclick="removeCompare('${ctx}',${i})">移除</button></td></tr>`;
-    }).join('');
+        `<td class="v">${r(x.Cmax,1)}</td><td class="v">${r(x.Cmin,1)} ${ev(x.Cmin,g.lo,g.hi)}</td><td class="v">${r(x.auc,0)} ${ev(x.auc,400,600)}</td><td><button class="ghost sm" title="移除" onclick="removeCompare('${ctx}',${i})">✕</button></td></tr>`
+    ).join('');
   $(ne).innerHTML=`<div class="btnrow" style="margin:10px 0 0"><button class="ghost" onclick="clearCompare('${ctx}')">清空比較</button></div>`;
   redrawChart(ctx);
 }
