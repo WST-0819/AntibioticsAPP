@@ -674,7 +674,7 @@ const TIPS={
   'Actual body weight':'族群 Vd 使用實際體重。\nCrCl 用體重：BMI <25 用實際體重；BMI ≥25 用 AdjBW = IBW + 0.4×(ABW − IBW)。',
   'Actual body weight (kg)':'族群 Vd 使用實際體重。\nCrCl 用體重：BMI <25 用實際體重；BMI ≥25 用 AdjBW = IBW + 0.4×(ABW − IBW)。',
   'AUC₂₄':'目標 AUC₂₄/MIC 400–600 mg·hr/L（假設 MIC = 1 mg/L）。\n2020 共識的建議對象為成人「嚴重 MRSA 感染」：菌血症、心內膜炎、骨髓炎、腦膜炎、肺炎、嚴重皮膚軟組織感染等。\n'+REF.CON,
-  'IDMS SCr':'OFF：直接帶入檢驗數值計算\nON：檢驗數值先經過換算後帶入\n緣由：CG公式使用Jaffe法測得之CRE，但目前IDMS標準檢驗所得數值較低，若直接帶入可能高估腎功能。\n本院使用Creatinine Jaffé Gen.2 (compensated，standardized against IDMS)，屬於補償型Jaffé 法，透過校正液得到IDMS近似值。\n但目前並無統一校正公式，對於不同族群誤差值也不同，故目前預設OFF，建議依據病人實際狀況綜合評估，校正前後數值做為輔助參考。',
+  'IDMS SCr':'OFF：直接帶入檢驗數值計算\nON：檢驗數值先經過換算後帶入(SCr*1.065+0.067)\n緣由：CG公式使用Jaffe法測得之CRE，但目前IDMS標準檢驗所得數值較低，若直接帶入可能高估腎功能。\n本院使用Creatinine Jaffé Gen.2 (compensated，standardized against IDMS)，屬於補償型Jaffé 法，透過校正液得到IDMS近似值。\n但目前並無統一校正公式，對於不同族群誤差值也不同，故目前預設OFF，建議依據病人實際狀況綜合評估，校正前後數值做為輔助參考。',
   'Infusion rate':'留白＝自動：≤2000 mg 輸注 2 hr；2001–2500 mg 2.5 hr；2501–3000 mg 3 hr；>3000 mg 以 1000 mg/hr。\n填入數值時，本頁所有劑量（目前、建議、自訂、比較）都使用此速率。',
   '藥動模擬圖':'以本頁 Ke、Vd 模擬一室模式間歇輸注的濃度曲線。Initial Dosing 含負荷劑量；濃度追蹤頁自穩態劑量起算。綠帶為 trough 目標範圍。',
 };
