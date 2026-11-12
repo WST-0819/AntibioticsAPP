@@ -1053,7 +1053,7 @@ function calcSST(){
       (b&&b.scrIn<0.5)?'SCr < 0.5，此計算結果為外推數值，CrCl 可能高估，建議盡早監測濃度。':'',
       AUC>700?'目前推估 AUC₂₄ >700，明顯偏高，建議降低每日總劑量。':'',
       
-      (isFinite(popAtT)&&Math.abs(C-popAtT)>10)?`量測濃度與族群預測值（${r(popAtT,1)} mg/L）相差 >10，請確認病人資料。`:'',
+      (isFinite(popAtT)&&popAtT>0&&Math.abs(C-popAtT)/popAtT>0.5)?`量測濃度 ${r(C,1)} mg/L 與族群預測值 ${r(popAtT,1)} mg/L 相差 ${r(Math.abs(C-popAtT)/popAtT*100,0)}%（>50%），請確認病人資料。`:'',
     ]};
   run();
 }
