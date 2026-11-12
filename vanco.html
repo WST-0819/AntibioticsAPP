@@ -1108,7 +1108,6 @@ function calcPT(){
     rows:[['Ke',r(Ke,4),'hr⁻¹'],['Half-life',r(half,1),'hr'],['Cmax',r(Cmax,1),'mg/L'],['Cmin',r(Cmin,1),'mg/L'],
       ['Vd',r(Vd,1),'L'],['CLvanco',r(CL,2),'L/hr'],['目前 AUC₂₄',r(AUC,0),'mg·hr/L']],
     alerts:[
-      dt<0.8*half?'兩點抽血時間可能太接近，Ke 未必準確。':'',
       AUC>700?'目前 AUC₂₄ 可能 >700，考慮降低每日總劑量。':'',
     ]};
   run();
