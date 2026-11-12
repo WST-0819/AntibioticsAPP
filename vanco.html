@@ -145,6 +145,15 @@ details.adv>summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--ac
 .ampt{font-size:13px;margin:8px 0}
 .ampt th,.ampt td{padding:3px 8px}
 .ampres{font-size:13px;padding:8px 10px;border-radius:6px;background:var(--bg);margin-bottom:6px}
+/* 左欄精簡：三欄輸入、日期時間單行 */
+.lcol .grid.g3{grid-template-columns:repeat(3,minmax(0,1fr));margin-top:10px}
+.dtr{display:grid;grid-template-columns:56px minmax(0,1.5fr) minmax(0,1fr) 74px;gap:6px;align-items:center;margin-top:8px}
+.dtr>span:first-child{font-size:12.5px;color:var(--muted)}
+.dtr .el{display:flex;align-items:center;gap:4px;font-size:12px;color:var(--muted)}
+.dtr .el input{padding:7px 6px;text-align:right;background:transparent;border-color:transparent;font-weight:600;color:var(--text)}
+.lcol h3{margin:12px 0 0}
+.sexrow{display:flex;align-items:center;gap:12px;grid-column:1/-1}.sexrow>span{font-size:12.5px;color:var(--muted)}
+.lsub{font-size:11px;color:var(--muted);font-weight:400}
 </style>
 </head>
 <body>
@@ -308,7 +317,7 @@ details.adv>summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--ac
     <div><label>SCr (mg/dL)</label><input id="t_scr" type="number" step="0.01"></div>
     <div><label>Height (cm)</label><input id="t_ht" type="number" step="0.1"></div>
     <div><label>Actual body weight (kg)</label><input id="t_wt" type="number" step="0.1"></div>
-    <div><label>性別</label>
+    <div class="sexrow"><span>性別</span>
       <div class="radios">
         <label><input type="radio" name="t_sex" value="M" checked>男</label>
         <label><input type="radio" name="t_sex" value="F">女</label>
@@ -317,18 +326,10 @@ details.adv>summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--ac
 </div>
 
 <div class="card">
-  <h2>Goal</h2>
+  <h2>目標與設定</h2>
   <div class="grid">
-    <div><label>Trough</label>
+    <div><label>Trough 目標 <span class="lsub">（AUC₂₄ 400–600）</span></label>
       <div style="display:flex;gap:6px"><select id="s_grange"><option>10-15</option><option selected>15-20</option></select><span class="unit">mg/L</span></div></div>
-    <div><label>AUC₂₄</label>
-      <div style="padding:7px 0;font-weight:600">400–600 <span style="color:var(--muted);font-weight:400;font-size:12.5px">mg·hr/L</span></div></div>
-  </div>
-</div>
-
-<div class="card">
-  <h2>Settings</h2>
-  <div class="grid">
     <div><label>Infusion rate</label>
       <div style="display:flex;gap:6px"><input id="s_rate" type="number" placeholder="自動"><span class="unit">mg/hr</span></div></div>
     <div style="grid-column:1/-1"><label>Amputations</label>
@@ -351,33 +352,25 @@ details.adv>summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--ac
 
 <div class="card">
   <h2>Steady-State Trough</h2>
-  <div class="two">
-    <div>
-      <div class="grid">
-        <div style="grid-column:1/-1"><label>計算模式</label>
-          <select id="s_mode">
-            <option value="est">Use estimated Ke and Vd</option>
-            <option value="vd">Vd is known</option>
-            <option value="ke">Ke is known</option>
-          </select></div>
-        <div id="s_vdBox" style="display:none"><label>Vd (L)</label><input id="s_vd" type="number" step="0.1"></div>
-        <div id="s_keBox" style="display:none"><label>Ke (hr⁻¹)</label><input id="s_ke" type="number" step="0.0001"></div>
-        <div><label>目前劑量 (mg)</label><input id="s_dose" type="number" step="250"></div>
-        <div><label>目前間隔 τ (hr)</label>
-          <select id="s_tau"><option>6</option><option>8</option><option selected>12</option><option>18</option><option>24</option><option>36</option><option>48</option><option>72</option></select></div>
-        <div><label>量測濃度 (mg/L)</label><input id="s_c" type="number" step="0.1"></div>
-      </div>
-      <h3>給藥開始</h3>
-      <div class="dt"><input id="s_d1" type="date"><input id="s_t1" type="text" placeholder="HH:MM" inputmode="numeric" maxlength="5"></div>
-      <h3>抽血</h3>
-      <div class="dt"><input id="s_d2" type="date"><input id="s_t2" type="text" placeholder="HH:MM" inputmode="numeric" maxlength="5"></div>
-      <div class="grid" style="margin-top:10px">
-        <div><label>給藥開始→抽血 (hr)</label><input id="s_t" type="text" readonly></div>
-      </div>
-      <div class="btnrow" style="margin:14px 0 0"><button onclick="calcSST()">計算</button><button class="ghost" onclick="clearPage('sst')">重設</button></div>
-      <div class="err" id="s_err"></div>
-    </div>
+  <div class="grid">
+    <div style="grid-column:1/-1"><label>計算模式</label>
+      <select id="s_mode">
+        <option value="est">Use estimated Ke and Vd</option>
+        <option value="vd">Vd is known</option>
+        <option value="ke">Ke is known</option>
+      </select></div>
+    <div id="s_vdBox" style="display:none"><label>Vd (L)</label><input id="s_vd" type="number" step="0.1"></div>
+    <div id="s_keBox" style="display:none"><label>Ke (hr⁻¹)</label><input id="s_ke" type="number" step="0.0001"></div>
   </div>
+  <div class="grid g3">
+    <div><label>目前劑量 (mg)</label><input id="s_dose" type="number" step="250"></div>
+    <div><label>間隔 τ (hr)</label><select id="s_tau"><option>6</option><option>8</option><option selected>12</option><option>18</option><option>24</option><option>36</option><option>48</option><option>72</option></select></div>
+    <div><label>濃度 (mg/L)</label><input id="s_c" type="number" step="0.1"></div>
+  </div>
+  <div class="dtr"><span>給藥開始</span><input id="s_d1" type="date"><input id="s_t1" type="text" placeholder="HH:MM" inputmode="numeric" maxlength="5"><span></span></div>
+  <div class="dtr"><span>抽血</span><input id="s_d2" type="date"><input id="s_t2" type="text" placeholder="HH:MM" inputmode="numeric" maxlength="5"><span class="el"><input id="s_t" type="text" readonly tabindex="-1">hr</span></div>
+  <div class="btnrow" style="margin:12px 0 0"><button onclick="calcSST()">計算</button><button class="ghost" onclick="clearPage('sst')">重設</button></div>
+  <div class="err" id="s_err"></div>
 </div>
 </div><div class="rcol">
 <div class="card"><h2>推算結果</h2><div class="scroll"><table id="tSST"></table></div><div id="fSST"></div><ul class="alerts" id="aSST"></ul></div>
@@ -412,18 +405,10 @@ details.adv>summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--ac
 <div class="page" id="page-pt">
 <div class="lay"><div class="lcol">
 <div class="card">
-  <h2>Goal</h2>
+  <h2>目標與設定</h2>
   <div class="grid">
-    <div><label>Trough</label>
+    <div><label>Trough 目標 <span class="lsub">（AUC₂₄ 400–600）</span></label>
       <div style="display:flex;gap:6px"><select id="q_grange"><option>10-15</option><option selected>15-20</option></select><span class="unit">mg/L</span></div></div>
-    <div><label>AUC₂₄</label>
-      <div style="padding:7px 0;font-weight:600">400–600 <span style="color:var(--muted);font-weight:400;font-size:12.5px">mg·hr/L</span></div></div>
-  </div>
-</div>
-
-<div class="card">
-  <h2>Settings</h2>
-  <div class="grid">
     <div><label>Infusion rate</label>
       <div style="display:flex;gap:6px"><input id="q_rate" type="number" placeholder="自動"><span class="unit">mg/hr</span></div></div>
   </div>
@@ -431,35 +416,20 @@ details.adv>summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--ac
 
 <div class="card">
   <h2>Steady-State Peak &amp; Trough</h2>
-  <div class="two">
-    <div>
-      <div class="grid">
-        <div><label>劑量 (mg)</label><input id="q_dose" type="number" step="250"></div>
-        <div><label>間隔 τ (hr)</label>
-          <select id="q_tau"><option>6</option><option>8</option><option selected>12</option><option>18</option><option>24</option><option>36</option><option>48</option><option>72</option></select></div>
-        <div><label>Peak 濃度 (mg/L)</label><input id="q_pk" type="number" step="0.1"></div>
-        <div><label>Trough 濃度 (mg/L)</label><input id="q_tr" type="number" step="0.1"></div>
-      </div>
-      <div class="two" style="margin-top:4px">
-        <div>
-          <h3>Peak 給藥開始</h3>
-          <div class="dt"><input id="q_d0" type="date"><input id="q_h0" type="text" placeholder="HH:MM" inputmode="numeric" maxlength="5"></div>
-          <h3>Peak 抽血</h3>
-          <div class="dt"><input id="q_d1" type="date"><input id="q_h1" type="text" placeholder="HH:MM" inputmode="numeric" maxlength="5"></div>
-          <div style="margin-top:10px"><label>給藥開始→Peak (hr)</label><input id="q_tpk" type="text" readonly></div>
-        </div>
-        <div>
-          <h3>Trough 給藥開始</h3>
-          <div class="dt"><input id="q_d3" type="date"><input id="q_h3" type="text" placeholder="HH:MM" inputmode="numeric" maxlength="5"></div>
-          <h3>Trough 抽血</h3>
-          <div class="dt"><input id="q_d2" type="date"><input id="q_h2" type="text" placeholder="HH:MM" inputmode="numeric" maxlength="5"></div>
-          <div style="margin-top:10px"><label>給藥開始→Trough (hr)</label><input id="q_ttr" type="text" readonly></div>
-        </div>
-      </div>
-      <div class="btnrow" style="margin:14px 0 0"><button onclick="calcPT()">計算</button><button class="ghost" onclick="clearPage('pt')">重設</button></div>
-      <div class="err" id="q_err"></div>
-    </div>
+  <div class="grid">
+    <div><label>劑量 (mg)</label><input id="q_dose" type="number" step="250"></div>
+    <div><label>間隔 τ (hr)</label><select id="q_tau"><option>6</option><option>8</option><option selected>12</option><option>18</option><option>24</option><option>36</option><option>48</option><option>72</option></select></div>
+    <div><label>Peak 濃度 (mg/L)</label><input id="q_pk" type="number" step="0.1"></div>
+    <div><label>Trough 濃度 (mg/L)</label><input id="q_tr" type="number" step="0.1"></div>
   </div>
+  <h3>Peak</h3>
+  <div class="dtr"><span>給藥開始</span><input id="q_d0" type="date"><input id="q_h0" type="text" placeholder="HH:MM" inputmode="numeric" maxlength="5"><span></span></div>
+  <div class="dtr"><span>抽血</span><input id="q_d1" type="date"><input id="q_h1" type="text" placeholder="HH:MM" inputmode="numeric" maxlength="5"><span class="el"><input id="q_tpk" type="text" readonly tabindex="-1">hr</span></div>
+  <h3>Trough</h3>
+  <div class="dtr"><span>給藥開始</span><input id="q_d3" type="date"><input id="q_h3" type="text" placeholder="HH:MM" inputmode="numeric" maxlength="5"><span></span></div>
+  <div class="dtr"><span>抽血</span><input id="q_d2" type="date"><input id="q_h2" type="text" placeholder="HH:MM" inputmode="numeric" maxlength="5"><span class="el"><input id="q_ttr" type="text" readonly tabindex="-1">hr</span></div>
+  <div class="btnrow" style="margin:12px 0 0"><button onclick="calcPT()">計算</button><button class="ghost" onclick="clearPage('pt')">重設</button></div>
+  <div class="err" id="q_err"></div>
 </div>
 </div><div class="rcol">
 <div class="card"><h2>推算結果</h2><div class="scroll"><table id="tPT"></table></div><div id="fPT"></div><ul class="alerts" id="aPT"></ul></div>
