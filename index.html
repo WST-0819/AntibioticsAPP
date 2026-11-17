@@ -341,6 +341,14 @@
   .drug.pt .pside{padding-top:10px}
   .drug.pt details.det{margin-top:0}
   @media (min-width:1500px){ main.layout{grid-template-columns:380px minmax(0,1fr)} }
+  /* 上：建議劑量整列；下：判讀流程｜參考原文 對齊 */
+  .drug.pt .ptop .concl{margin:10px 16px 12px}
+  /* 整列時劑量各項左右並排（標籤在上、數值在下） */
+  .drug.pt .ptop .dl{grid-template-rows:auto auto;grid-auto-flow:column;grid-template-columns:none;grid-auto-columns:max-content;column-gap:56px;row-gap:2px}
+  .drug.pt .ptop .dlv{margin-bottom:0}
+  @media (max-width:700px){.drug.pt .ptop .dl{grid-auto-flow:row;grid-template-rows:none;grid-auto-columns:auto}}
+  .drug.pt .pflow{padding:4px 16px 8px}
+  .drug.pt.open .pside{padding-top:4px}
 </style>
 </head>
 <body>
@@ -1553,7 +1561,8 @@ function personal(rows, terms){
       <div><div class="dn" style="font-size:16px">${hl(r[0], terms)}${r[2] ? `<span class="rt">${esc(r[2])}</span>` : ""}</div>
       <div class="di">${hl(r[1], terms)}</div>${extraBtns(r, "*")}</div>
       </div>
-      <div class="pbody"><div class="pmain">${c.main}<div class="pflow">${c.side}</div></div>
+      <div class="ptop">${c.main}</div>
+      <div class="pbody"><div class="pmain"><div class="pflow">${c.side}</div></div>
       <div class="pside">${detailBlock(r, s).replace("<details class=\"det\">", "<details class=\"det\" open>")}
       <div class="disc">自動比對僅根據表中文字的數值與族群條件，敘述式條件可能遺漏；多重特性的結論為條列整合，非藥動學運算。請務必核對原文與臨床情境後再決定劑量。</div></div></div>
       </div>`;
