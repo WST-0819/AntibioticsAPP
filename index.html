@@ -1490,8 +1490,8 @@ function conclusion(r, s){
   const st1 = [];
   if (s.general){
     const useGen = !s.base || s.base.fromGeneral || !s.baseTrait;
-    if (kidNoPeds) st1.push({t:"一般劑量", use:false, note:"成人劑量，兒童不適用"});
-    else st1.push({t:"一般劑量", use:useGen, v:s.general.line, src:(s.general.rows.find(z => z.src) || {}).src || ""});
+    if (p.age != null && p.age < 18) st1.push({t:"一般成人劑量", use:false, note:"成人劑量，兒童不適用"});
+    else st1.push({t:"一般成人劑量", use:useGen, v:s.general.line, src:(s.general.rows.find(z => z.src) || {}).src || ""});
   }
   // ② 特殊族群判定
   const st2 = [];
