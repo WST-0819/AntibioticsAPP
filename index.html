@@ -1468,8 +1468,11 @@ function conclusion(r, s){
     return {main:`<div class="concl non"><div class="cdose">表中無可對應目前病人條件的劑量資料</div></div>`,
       side: `<div class="cmiss" style="margin-top:0">請改用下方分頁的總表自行判讀。</div>` + (hepTxt ? `<div class="ck2" style="margin-top:0">肝功能（共通資訊）</div><div class="cmiss" style="margin-top:0;white-space:pre-line;color:var(--text)">${esc(hepTxt)}</div>` : "")};
   }
+  const kidNoPeds = p.age != null && p.age < 18 && !(s.baseTrait && s.baseTrait.key === "peds");
   const amb = s.conflicts.length > 0 || !s.base || s.baseNeedsCheck;
-  const main = s.base
+  const main = kidNoPeds
+    ? `<div class="cdose">表中無兒科劑量資料，不提供建議劑量</div>`
+    : s.base
     ? doseLines(s.base.rows)
     : `<div class="cdose">無法判定基礎劑量</div>`;
 
@@ -1487,7 +1490,8 @@ function conclusion(r, s){
   const st1 = [];
   if (s.general){
     const useGen = !s.base || s.base.fromGeneral || !s.baseTrait;
-    st1.push({t:"一般劑量", use:useGen, v:s.general.line, src:(s.general.rows.find(z => z.src) || {}).src || ""});
+    if (kidNoPeds) st1.push({t:"一般劑量", use:false, note:"成人劑量，兒童不適用"});
+    else st1.push({t:"一般劑量", use:useGen, v:s.general.line, src:(s.general.rows.find(z => z.src) || {}).src || ""});
   }
   // ② 特殊族群判定
   const st2 = [];
@@ -1514,13 +1518,16 @@ function conclusion(r, s){
     + `</div>`;
 
   const notes = [];
-  if (s.pedsRenal && s.pedsRenal.infant)
+  if (kidNoPeds)
+    notes.push(`<div class="cwarn">⚠ 此藥表中無兒科劑量，請查兒科劑量參考（如 Lexicomp Pediatric、Harriet Lane）或會診。</div>`);
+  if (kidNoPeds) {}
+  else if (s.pedsRenal && s.pedsRenal.infant)
     notes.push(`<div class="cwarn">⚠ 1 歲以下嬰兒腎功能需依年齡判讀，本表腎功能調整（成人資料）不適用，請查兒科劑量參考或會診。</div>`);
   else if (s.pedsRenal && s.pedsRenal.adjust)
     notes.push(`<div class="cwarn">⚠ 兒童腎功能下降（Schwartz eGFR ${esc(r1(s.pedsRenal.egfr))} mL/min/1.73m²），本表腎功能調整為成人資料，不適用；請查兒科劑量參考（如 Lexicomp Pediatric、Harriet Lane）或會診。</div>`);
   if (s.conflicts.length)
     notes.push(`<div class="cwarn">⚠ ${esc(s.conflicts.map(c => c.trait.label).join("、"))} 另有具體劑量建議，與上方劑量不是可直接相加的獨立調整，須人工整合後決定。</div>`);
-  if (s.baseNeedsCheck)
+  if (s.baseNeedsCheck && !kidNoPeds)
     notes.push(`<div class="cwarn">⚠ 目前符合的族群條件在表中未比中可用條文，上方顯示的是一般成人劑量，未經該族群校正。</div>`);
   const miss = s.missing.filter(m => m.hasCol), nocol = s.missing.filter(m => !m.hasCol);
   if (miss.length || nocol.length){
