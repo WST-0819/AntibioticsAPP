@@ -1521,10 +1521,10 @@ function conclusion(r, s){
 
   const notes = [];
   if (kidNoPeds)
-    notes.push(`<div class="cwarn">⚠ 此藥表中無兒科劑量，請查兒科劑量參考（如 Lexicomp Pediatric、Harriet Lane）或會診。</div>`);
+    notes.push(`<div class="cwarn">⚠ 本表尚未新增此藥兒科劑量資料；請參考UpToDate、Micromedex 做為劑量最終確認。</div>`);
   if (kidNoPeds) {}
   else if (s.pedsRenal && s.pedsRenal.infant)
-    notes.push(`<div class="cwarn">⚠ 1 歲以下嬰兒腎功能需依年齡判讀，本表腎功能調整（成人資料）不適用，請查兒科劑量參考或會診。</div>`);
+    notes.push(`<div class="cwarn">⚠ 1 歲以下嬰兒腎功能需依年齡判讀，本表尚未新增小兒腎功能調整資料；請參考UpToDate、Micromedex 做為劑量最終確認。</div>`);
   else if (s.pedsRenal && s.pedsRenal.adjust)
     notes.push(`<div class="cwarn">⚠ 兒童腎功能不佳（Schwartz eGFR ${esc(r1(s.pedsRenal.egfr))} mL/min/1.73m²），本表尚未新增小兒腎功能調整資料；請參考UpToDate、Micromedex 做為劑量最終確認。</div>`);
   if (s.conflicts.length)
