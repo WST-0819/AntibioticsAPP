@@ -103,6 +103,8 @@ button.rpt{background:var(--ok)}
 .rcol .card .two .grid{grid-template-columns:repeat(2,minmax(0,1fr))}
 @media (max-width:1150px){.rcol .card .two{grid-template-columns:minmax(0,1fr)}}
 #recNote,#s_rec,#q_rec{display:none}
+#pk tbody{grid-template-columns:repeat(5,minmax(0,1fr))}
+@media (max-width:700px){#pk tbody{grid-template-columns:repeat(2,minmax(0,1fr))}}
 #tInit tbody,#s_adopt tbody,#q_adopt tbody{grid-template-columns:repeat(3,minmax(0,1fr))}
 /* 主要評估：Peak／Trough／AUC 置頂並強調，依目標範圍上色 */
 .rcol tr.key{background:var(--card)!important;border:2px solid var(--accent2)}
@@ -962,9 +964,11 @@ function runInit(){
   useRate('init');
   if(!patientOK('')){ $('pkNote').innerHTML='<span style="color:var(--warn)">請先完整填寫病人資料，並修正超出範圍的數值</span>'; showRangeErr(); S.init.pk=null; return; }
   const b=base('');
-  tbl('pk',[['CrCl',r(b.crcl,0),'mL/min'],['CLvanco',r(b.CLv,2),'L/hr'],['Vd',r(b.Vd,0),'L'],
+  /* 直接標示各參數依據的體重 */
+  const wLbl = b.bmi<25 ? `TBW ${r(b.wt,1)} kg` : `AdjBW ${r(b.w11,1)} kg`;
+  tbl('pk',[['CrCl',r(b.crcl,0),`mL/min・${wLbl}`+(b.capped?'（年齡上限）':'')],['CLvanco',r(b.CLv,2),'L/hr'],['Vd',r(b.Vd,0),`L・TBW ${r(b.wt,1)} kg`],
     ['Ke',r(b.Ke,4),'hr⁻¹'],['Half-life',r(b.half,1),'hrs']]);
-  $('pkNote').textContent=`IBW ${r(b.ibw,1)} kg・BMI ${r(b.bmi,1)}・CrCl 用體重 ${r(b.w11,1)} kg`+(b.capped?'・CrCl 已達年齡上限':'');
+  $('pkNote').textContent=`IBW ${r(b.ibw,1)} kg・BMI ${r(b.bmi,1)}`;
   $('slope').disabled=!b.idmsOn; $('yint').disabled=!b.idmsOn;
 
   const pk={Ke:b.Ke,Vd:b.Vd,CL:b.CLv}; S.init.pk=pk;
