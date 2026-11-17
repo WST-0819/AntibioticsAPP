@@ -251,7 +251,7 @@
   .drug.pt .disc{margin:0}
   @container (min-width:820px){
     .drug.pt.open .pbody{grid-template-columns:minmax(260px,.8fr) 1.4fr}
-    .drug.pt.open .pside{padding:10px 16px 4px 0;max-height:70vh;overflow:auto}
+    .drug.pt.open .pside{padding:10px 16px 4px 0}
     .drug.pt.open .pmain{position:sticky;top:0}
   }
   .dl{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;align-items:baseline}
@@ -295,12 +295,43 @@
   #tip{position:fixed;z-index:999;display:none;max-width:360px;padding:9px 11px;border-radius:7px;
     background:#1f2933;color:#f1f5f9;font-size:12.5px;line-height:1.6;white-space:pre-line;
     box-shadow:0 6px 20px rgba(0,0,0,.18);pointer-events:none;text-align:left}
+
+  /* ===== 雙欄：左＝病人資訊，右＝抗生素資訊 ===== */
+  header{position:static;padding:10px 20px}
+  .titlerow{margin-top:0}
+  main.layout{display:grid;grid-template-columns:340px minmax(0,1fr);gap:18px;align-items:start;padding-top:14px}
+  .lside{position:sticky;top:12px;max-height:calc(100vh - 24px);overflow:auto}
+  .lside .pt{background:var(--card);box-shadow:var(--shadow)}
+  .lside .pt .ptbody{display:block}
+  .lside .pthead{cursor:default;font-size:14px;padding:10px 14px}
+  .lside .pthead .caret{display:none}
+  .lside .ptsum{display:none}
+  .lside .ptgrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .rctl{position:sticky;top:0;z-index:15;background:var(--bg);padding:2px 0 8px;margin-bottom:6px}
+  .rctl .tabs{margin-top:0}
+  @media (max-width:980px){
+    main.layout{grid-template-columns:minmax(0,1fr)}
+    .lside{position:static;max-height:none}
+    .lside .pt .ptbody{display:none}.lside .pt.open .ptbody{display:block}
+    .lside .pthead{cursor:pointer}.lside .pthead .caret,.lside .ptsum{display:inline}
+  }
 </style>
 </head>
 <body>
 <div id="tip"></div>
 <header>
  <div class="wrap">
+  <div class="hrow titlerow">
+    <h1>抗生素劑量查詢系統</h1>
+    <div class="sub" id="meta">尚未載入資料</div>
+    <div class="grow"></div>
+    <button class="primary" id="load">載入 / 更新資料</button>
+  </div>
+
+ </div>
+</header>
+<main class="layout">
+<aside class="lside">
   <div class="pt" id="pt">
     <div class="pthead" id="pthead">
       <span class="caret">▶</span>
@@ -333,21 +364,16 @@
     </div>
   </div>
 
-  <div class="hrow titlerow">
-    <h1>抗生素劑量查詢系統</h1>
-    <div class="sub" id="meta">尚未載入資料</div>
-    <div class="grow"></div>
-    <button class="primary" id="load">載入 / 更新資料</button>
-  </div>
-
+</aside>
+<section class="rside">
+<div class="rctl">
   <div class="tabs" id="tabs"></div>
   <input id="search" placeholder="搜尋藥品名稱或成分名稱（模糊搜尋，可用空白分隔多個關鍵字）" autocomplete="off">
   <div class="routes" id="routes"></div>
- </div>
-</header>
-<main>
+</div>
   <div class="status" id="status">請按右上角「載入 / 更新資料」從 Google 試算表取得最新內容。</div>
   <div id="view"></div>
+</section>
 </main>
 
 <div class="drawer" id="drawer">
@@ -1226,16 +1252,18 @@ function ptRender(){
   if (wts.length) rows.push({k:"體重", v:wts, tip:"IBW（Devine）：男 50／女 45.5 + 2.3 ×（身高 inch − 60）\n　限身高 ≥152 cm，兒童不適用\nAdjBW＝IBW + 0.4 ×（TBW − IBW），TBW ≤ IBW 時＝TBW\nBMI＝體重 kg ÷ 身高 m²\nBSA（Du Bois）＝0.007184 × 身高^0.725 × 體重^0.425"});
 
   const crs = [];
-  if (c.cgTBW != null) crs.push(chip("CG·TBW", r1(c.cgTBW), "", c.crclSrc === "CG/TBW"));
-  if (c.cgIBW != null) crs.push(chip("CG·IBW", r1(c.cgIBW), "", c.crclSrc === "CG/IBW"));
-  if (c.cgAdj != null && c.adj !== c.wt) crs.push(chip("CG·AdjBW", r1(c.cgAdj), "", c.crclSrc === "CG/AdjBW"));
+  /* 只列實際採用的 CG 值（體重已由「CrCl 採用體重」決定） */
   if (num(PT.crclman) != null) crs.push(chip("手動指定", r1(c.vCrCl), "", true));
+  else if (c.crclSrc && c.crclSrc.startsWith("CG/")){
+    const cg = {TBW:c.cgTBW, IBW:c.cgIBW, AdjBW:c.cgAdj}[c.crclSrc.slice(3)];
+    if (cg != null) crs.push(chip("CG·" + c.crclSrc.slice(3), r1(cg), "", true));
+  }
   if (isPeds && c.schw != null && !crs.length) crs.push(chip("Schwartz 代用", r1(c.schw), "", true));
   if (crs.length) rows.push({k:"CrCl", v:crs, u:"mL/min", tip:"Cockcroft-Gault：(140 − 年齡) × 體重 ÷ (72 × SCr)，女性 × 0.85\n　體重依「CrCl 採用體重」設定（TBW／IBW／AdjBW）\n　限 ≥18 歲；兒童改以 Schwartz eGFR 代用\n已填「直接指定 CrCl」時以指定值為準"});
 
   const eg = [];
   if (c.mdrd != null && !isPeds) eg.push(chip("MDRD (IDMS)", r1(c.mdrd), "", c.egfrFormula === "mdrd"));
-  if (c.epi != null && !isPeds) eg.push(chip("CKD-EPI 2021", r1(c.epi), "", c.egfrFormula === "epi"));
+  if (c.epi != null && !isPeds && c.egfrFormula === "epi") eg.push(chip("CKD-EPI 2021", r1(c.epi), "", true));
   if (c.schw != null && isPeds) eg.push(chip("Schwartz", r1(c.schw), "", true));
   if (c.egfrAbs != null) eg.push(chip("絕對值 (×BSA/1.73)", r1(c.egfrAbs), "mL/min", false));
   if (eg.length) rows.push({k:"eGFR", v:eg, u:"mL/min/1.73m²", tip:"MDRD（IDMS，採用）：175 × SCr^−1.154 × 年齡^−0.203，女性 × 0.742\nCKD-EPI 2021（對照）：142 × min(SCr/κ,1)^α × max(SCr/κ,1)^−1.200 × 0.9938^年齡，女性 × 1.012\n　κ 男 0.9／女 0.7；α 男 −0.302／女 −0.241\n兒童 Schwartz：0.413 × 身高 cm ÷ SCr\n皆未套用種族係數\n絕對值＝eGFR × BSA ÷ 1.73"});
@@ -1491,10 +1519,10 @@ function personal(rows, terms){
 
   return head + list.map(r => {
     const s = synth(r), c = conclusion(r, s), k = r[0] + "|" + (r[2] || ""), on = PT_OPEN.has(k);
-    return `<div class="drug pt${on ? " open" : ""}" data-k="${esc(k)}"><div class="dhead prow">
+    return `<div class="drug pt open" data-k="${esc(k)}"><div class="dhead prow">
       <div><div class="dn" style="font-size:16px">${hl(r[0], terms)}${r[2] ? `<span class="rt">${esc(r[2])}</span>` : ""}</div>
       <div class="di">${hl(r[1], terms)}</div>${extraBtns(r, "*")}</div>
-      <button class="whybtn" onclick="ptToggle(this)">${on ? "收合依據 ◂" : "查看依據 ▸"}</button></div>
+      </div>
       <div class="pbody"><div class="pmain">${c.main}</div>
       <div class="pside">${c.side}${detailBlock(r, s).replace("<details class=\"det\">", "<details class=\"det\" open>")}
       <div class="disc">自動比對僅根據表中文字的數值與族群條件，敘述式條件可能遺漏；多重特性的結論為條列整合，非藥動學運算。請務必核對原文與臨床情境後再決定劑量。</div></div></div>
