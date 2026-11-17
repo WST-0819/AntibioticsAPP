@@ -250,12 +250,14 @@
   .drug.pt details.det{margin:10px 0 12px}
   .drug.pt .disc{margin:0}
   @container (min-width:820px){
-    .drug.pt.open .pbody{grid-template-columns:minmax(260px,.8fr) 1.4fr}
+    .drug.pt.open .pbody{grid-template-columns:minmax(340px,1fr) minmax(0,1.35fr)}
     .drug.pt.open .pside{padding:10px 16px 4px 0}
     .drug.pt.open .pmain{position:sticky;top:0}
   }
   .dl{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;align-items:baseline}
   .dlk{font-size:12px;font-weight:700;color:var(--hit-text);opacity:.75;white-space:nowrap}
+  .dl{grid-template-columns:72px 1fr;gap:8px 14px}
+  .drug.pt .concl{padding:14px 18px}
   .dlv{font-size:17px;font-weight:800;line-height:1.4;color:var(--hit-text);white-space:pre-line;word-break:break-word}
   .concl.amb .dlk,.concl.amb .dlv{color:var(--warn-text)}
   .drug.pt .cbase{margin-top:6px;font-size:11.5px}
@@ -323,7 +325,7 @@
   .stage .sn{position:absolute;left:-12px;top:-1px;width:22px;height:22px;border-radius:50%;background:var(--accent);
     color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center}
   .stage .st{font-size:12.5px;font-weight:800;color:var(--accent);margin:1px 0 6px}
-  .stage table.ctab{margin:0}
+  .stage table.ctab{margin:0;min-width:0;width:100%}
   .stage table.ctab td.kk{width:96px}.stage table.ctab td.jj{width:110px}
 </style>
 </head>
@@ -1449,7 +1451,7 @@ function conclusion(r, s){
   const st1 = [];
   if (s.general){
     const useGen = !s.base || s.base.fromGeneral || !s.baseTrait;
-    st1.push({t:"一般劑量", k: useGen ? "採用" : "已由族群劑量取代", v:s.general.line,
+    st1.push({t:"一般劑量", k: useGen ? "採用" : "未採用", v:s.general.line,
       src:(s.general.rows.find(z => z.src) || {}).src || "", cls: useGen ? "" : "none"});
   }
   // ② 特殊族群判定
@@ -1509,9 +1511,10 @@ function detailBlock(r, s){
         <div class="db">${body}</div></div>`);
     });
   });
-  baseDoseCols(r).forEach(b => {
-    secs.push(`<div class="dsec${s.superseded ? " gone" : ""}"><div class="dh">
-      <span class="tag">${s.superseded ? "已取代" : "一般"}</span>${esc(b.head)}
+  /* 一般劑量已被族群劑量取代時不列出，只呈現實際採用的內容 */
+  if (!s.superseded) baseDoseCols(r).forEach(b => {
+    secs.push(`<div class="dsec"><div class="dh">
+      <span class="tag">一般</span>${esc(b.head)}
       <span class="src">${b.src ? esc(b.src) : "—"}</span></div>
       <div class="db"><div class="v">${esc(b.val)}</div></div></div>`);
   });
