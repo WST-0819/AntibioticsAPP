@@ -627,7 +627,7 @@ const ageTxt = a => a == null ? "" : (a < 2 ? Math.round(a * 12) + " 個月" : r
    ========================================================= */
 const TRAITS = [
   {key:"dial",  label:"腎臟替代治療", fam:"dialysis", base:true, basePri:2, kind:"cond",
-   active:p => p.dial !== "none",
+   active:p => p.dial !== "none" && !(p.age != null && p.age < 18),   /* 成人資料，兒童不採用 */
    note:p => p.dial,
    colRe:/透析|洗腎|dialy|\bi?hd\b|capd|apd|\bpd\b|腹膜|cvvh|crrt|scuf|sled/i,
    colFilter:c => modalityOf(c) === PT.dial},
@@ -1122,6 +1122,12 @@ function synth(r){
         egfr: p.vEgfr != null ? p.vEgfr : p.vCrCl};
     }
   }
+  if (p.age != null && p.age < 18 && p.dial !== "none"){
+    const dialT = TRAITS.find(t => t.key === "dial");
+    const pedsHasDial = traitCols(TRAITS.find(t => t.key === "peds")).some(c => dialT.colRe.test(colText(c)) && cell(r[c]));
+    const hasDialData = availOK(dialT) && traitCols(dialT).some(c => cell(r[c]));
+    if (hasDialData && !pedsHasDial) res.pedsRenal = {dial: p.dial};
+  }
 
   // 修飾特性
   acts.forEach(t => {
@@ -1506,7 +1512,7 @@ function conclusion(r, s){
     const msrcs = [...new Set((m.segs || []).map(x => x.src).filter(Boolean))];
     st2.push({t:m.trait.label, use:true, v:(m.line || m.text), src:msrcs.join("／")});
   });
-  if (s.pedsRenal) st2.push({t:"腎功能", use:false, note:"表內為成人資料，兒童不適用"});
+  if (s.pedsRenal) st2.push({t:s.pedsRenal.dial ? "腎臟替代治療" : "腎功能", use:false, note:"表內為成人資料，兒童不適用"});
   const hepT = TRAITS.find(t => t.key === "hep");
   const hepKid = p.age != null && p.age < 18 && hepT && availOK(hepT) && traitCols(hepT).some(c => cell(r[c]));
   if (hepKid) st2.push({t:"肝功能", use:false, note:"表內為成人資料，兒童不適用"});
@@ -1525,7 +1531,9 @@ function conclusion(r, s){
   const topw = [];
   if (!kidNoPeds && s.pedsRenal){
     const eg = !s.pedsRenal.infant && s.pedsRenal.egfr != null ? `（Schwartz eGFR ${esc(r1(s.pedsRenal.egfr))} mL/min/1.73m²）` : "";
-    topw.push(`<div class="cwarn">⚠ 目前建議為腎功能正常者劑量，本表尚無小兒腎功能調整資料，請依腎功能${eg}參考UpToDate、Micromedex 確認劑量。</div>`);
+    topw.push(s.pedsRenal.dial
+      ? `<div class="cwarn">⚠ 目前建議為腎功能正常者劑量，本表尚無小兒${esc(s.pedsRenal.dial)}調整資料，請參考UpToDate、Micromedex 確認劑量。</div>`
+      : `<div class="cwarn">⚠ 目前建議為腎功能正常者劑量，本表尚無小兒腎功能調整資料，請依腎功能${eg}參考UpToDate、Micromedex 確認劑量。</div>`);
   }
   if (s.conflicts.length)
     notes.push(`<div class="cwarn">⚠ ${esc(s.conflicts.map(c => c.trait.label).join("、"))} 另有具體劑量建議，與上方劑量不是可直接相加的獨立調整，須人工整合後決定。</div>`);
