@@ -1523,11 +1523,10 @@ function conclusion(r, s){
   if (kidNoPeds)
     notes.push(`<div class="cwarn">⚠ 本表尚未新增此藥兒科劑量資料；請參考UpToDate、Micromedex 做為劑量最終確認。</div>`);
   const topw = [];
-  if (kidNoPeds) {}
-  else if (s.pedsRenal && s.pedsRenal.infant)
-    topw.push(`<div class="cwarn">⚠ 1 歲以下嬰兒腎功能需依年齡判讀，本表尚未新增小兒腎功能調整資料；請參考UpToDate、Micromedex 做為劑量最終確認。</div>`);
-  else if (s.pedsRenal && s.pedsRenal.adjust)
-    topw.push(`<div class="cwarn">⚠ 兒童腎功能不佳（Schwartz eGFR ${esc(r1(s.pedsRenal.egfr))} mL/min/1.73m²），本表尚未新增小兒腎功能調整資料；請參考UpToDate、Micromedex 做為劑量最終確認。</div>`);
+  if (!kidNoPeds && s.pedsRenal){
+    const eg = !s.pedsRenal.infant && s.pedsRenal.egfr != null ? `（Schwartz eGFR ${esc(r1(s.pedsRenal.egfr))} mL/min/1.73m²）` : "";
+    topw.push(`<div class="cwarn">⚠ 本表尚未新增小兒腎功能調整資料，請依病人腎功能${eg}參考UpToDate、Micromedex 做為劑量最終確認。</div>`);
+  }
   if (s.conflicts.length)
     notes.push(`<div class="cwarn">⚠ ${esc(s.conflicts.map(c => c.trait.label).join("、"))} 另有具體劑量建議，與上方劑量不是可直接相加的獨立調整，須人工整合後決定。</div>`);
   if (s.baseNeedsCheck && !kidNoPeds)
