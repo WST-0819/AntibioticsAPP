@@ -1525,7 +1525,7 @@ function conclusion(r, s){
   const topw = [];
   if (!kidNoPeds && s.pedsRenal){
     const eg = !s.pedsRenal.infant && s.pedsRenal.egfr != null ? `（Schwartz eGFR ${esc(r1(s.pedsRenal.egfr))} mL/min/1.73m²）` : "";
-    topw.push(`<div class="cwarn">⚠ 本表尚未新增小兒腎功能調整資料，請依病人腎功能${eg}參考UpToDate、Micromedex 做為劑量最終確認。</div>`);
+    topw.push(`<div class="cwarn">⚠ 目前劑量建議為腎功能正常者劑量，本表尚未新增小兒腎功能調整資料，請依病人腎功能${eg}參考UpToDate、Micromedex 做為劑量最終確認。</div>`);
   }
   if (s.conflicts.length)
     notes.push(`<div class="cwarn">⚠ ${esc(s.conflicts.map(c => c.trait.label).join("、"))} 另有具體劑量建議，與上方劑量不是可直接相加的獨立調整，須人工整合後決定。</div>`);
