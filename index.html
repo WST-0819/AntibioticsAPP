@@ -1499,7 +1499,7 @@ function conclusion(r, s){
     const bsegs = s.base.segs || [];
     if (bsegs.length){
       const srcs = [...new Set(bsegs.map(x => x.src).filter(Boolean))];
-      st2.push({t:s.baseTrait.label, use:true, v:bsegs.map(x => x.seg).join("\n") + (s.base.fromGeneral ? "\n→ 維持基本劑量" : "\n→ 改用此劑量"), src:srcs.join("／")});
+      st2.push({t:s.baseTrait.label, use:true, v:bsegs.map(x => x.seg).join("\n") + (s.base.fromGeneral ? "\n→ 維持基本劑量" : ""), src:srcs.join("／")});
     }
   }
   s.modifiers.forEach(m => {
