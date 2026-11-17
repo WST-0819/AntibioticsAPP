@@ -1499,12 +1499,12 @@ function conclusion(r, s){
     const bsegs = s.base.segs || [];
     if (bsegs.length){
       const srcs = [...new Set(bsegs.map(x => x.src).filter(Boolean))];
-      st2.push({t:s.baseTrait.label, use:true, v:bsegs.map(x => x.seg).join("\n") + (s.base.fromGeneral ? "\n→ 維持基本劑量" : ""), src:srcs.join("／")});
+      st2.push({t:s.baseTrait.label, use:true, v:bsegs.map(x => x.seg).join("\n"), src:srcs.join("／")});
     }
   }
   s.modifiers.forEach(m => {
     const msrcs = [...new Set((m.segs || []).map(x => x.src).filter(Boolean))];
-    st2.push({t:m.trait.label, use:true, v:(m.line || m.text) + (m.kind === "none" ? "\n→ 維持基本劑量" : ""), src:msrcs.join("／")});
+    st2.push({t:m.trait.label, use:true, v:(m.line || m.text), src:msrcs.join("／")});
   });
   if (s.pedsRenal) st2.push({t:"腎功能", use:false, note:"表內為成人資料，兒童不適用"});
   const hepT = TRAITS.find(t => t.key === "hep");
