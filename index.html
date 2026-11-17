@@ -633,7 +633,7 @@ const TRAITS = [
    colFilter:c => modalityOf(c) === PT.dial},
 
   {key:"renal", label:"腎功能", fam:"renal", base:true, basePri:3, kind:"cond",
-   active:p => p.dial === "none" && (p.vCrCl != null || p.vEgfr != null),
+   active:p => p.dial === "none" && (p.vCrCl != null || p.vEgfr != null) && !(p.age != null && p.age < 18),   /* 成人資料，兒童不採用 */
    note:p => [p.vCrCl != null ? "CrCl " + r1(p.vCrCl) : "",
               p.vEgfr != null ? "eGFR " + r1(p.vEgfr) : ""].filter(Boolean).join("／"),
    colRe:/腎功能|renal|crcl|egfr|ccr|腎臟功能|腎功能調整/i},
@@ -777,7 +777,7 @@ function renderRoutes(){
 }
 
 function activeTraits(){ const p = calc(); return TRAITS.filter(t => availOK(t) && t.active(p)); }
-function ptReady(){ return activeTraits().length > 0; }
+function ptReady(){ const p = calc(); return activeTraits().length > 0 || (p.age != null && p.age < 18); }
 
 /* =========================================================
    條件解析引擎（多變數：CrCl / BMI / 體重 / 年齡）
@@ -1111,6 +1111,18 @@ function synth(r){
     res.baseNeedsCheck = !!baseT;
   }
 
+  // 兒童：表內腎功能調整為成人資料，不採用；依成人門檻判斷是否需要提醒
+  if (p.age != null && p.age < 18 && p.dial === "none"){
+    const renalT = TRAITS.find(t => t.key === "renal");
+    const pedsHasRenal = traitCols(TRAITS.find(t => t.key === "peds")).some(c => renalT.colRe.test(colText(c)) && cell(r[c]));
+    const hasRenalData = availOK(renalT) && traitCols(renalT).some(c => cell(r[c]));
+    if (hasRenalData && !pedsHasRenal){
+      const rv = (p.vCrCl != null || p.vEgfr != null) ? resolveTrait(r, renalT) : {kind:null};
+      res.pedsRenal = {infant: p.age < 1, adjust: rv.kind === "dose",
+        egfr: p.vEgfr != null ? p.vEgfr : p.vCrCl};
+    }
+  }
+
   // 修飾特性
   acts.forEach(t => {
     if (t === res.baseTrait) return;
@@ -1312,7 +1324,7 @@ function ptRender(){
   let w = "";
   const man = num(PT.crclman);
   if (man != null) w = `已直接指定 CrCl ${man} mL/min（非肌酸酐值），公式估算值不採用。`;
-  else if (c.crclProxy) w = "兒童無 CG 公式，表中寫 CrCl 的條文改以 Schwartz eGFR 代用判定，兩者非完全等值。";
+  else if (c.crclProxy) w = "兒童不套用表內成人腎功能調整；Schwartz eGFR 僅用於判斷是否需提醒查兒科資料。";
   else if (c.egfrProxy) w = "無法計算 eGFR，表中寫 eGFR 的條文改以 CrCl 代用判定。";
   else if (c.vCrCl != null && c.vEgfr != null && Math.abs(c.vCrCl - c.vEgfr) / Math.max(c.vCrCl, c.vEgfr) > 0.25)
     w = `CrCl ${r1(c.vCrCl)} 與 eGFR ${r1(c.vEgfr)} 差距逾 25%（一為絕對值、一為每 1.73m² 標準化），請注意該藥文獻是以哪一個分層。`;
@@ -1467,7 +1479,7 @@ function conclusion(r, s){
     ? `<tr><td class="kk">${esc(x.t)}</td><td class="jj">採用</td>
       <td class="vv">${esc(x.v)}<div class="srcinline">來源：${esc(x.src || "—")}</div></td>
       <td class="srccol">${srcCell(x.src)}</td></tr>`
-    : `<tr class="dimrow"><td class="kk">${esc(x.t)}</td><td class="jj none">未採用</td><td class="vv"></td><td class="srccol"></td></tr>`;
+    : `<tr class="dimrow"><td class="kk">${esc(x.t)}</td><td class="jj none">未採用</td><td class="vv">${esc(x.note || "")}</td><td class="srccol"></td></tr>`;
   const tbl = rows => `<table class="ctab why"><tbody>${rows.map(row).join("")}</tbody></table>`;
   const stage = (n, title, body) => `<div class="stage"><span class="sn">${n}</span><div class="st">${title}</div>${body}</div>`;
 
@@ -1490,6 +1502,7 @@ function conclusion(r, s){
     const msrcs = [...new Set((m.segs || []).map(x => x.src).filter(Boolean))];
     st2.push({t:m.trait.label, use:true, v:(m.line || m.text) + (m.kind === "none" ? "\n→ 維持基本劑量" : ""), src:msrcs.join("／")});
   });
+  if (s.pedsRenal) st2.push({t:"腎功能", use:false, note:"表內為成人資料，兒童不適用"});
   const hepT = TRAITS.find(t => t.key === "hep");
   if (hepT && availOK(hepT)) traitCols(hepT).forEach(c => {
     const v = cell(r[c]); if (!v) return;
@@ -1501,6 +1514,10 @@ function conclusion(r, s){
     + `</div>`;
 
   const notes = [];
+  if (s.pedsRenal && s.pedsRenal.infant)
+    notes.push(`<div class="cwarn">⚠ 1 歲以下嬰兒腎功能需依年齡判讀，本表腎功能調整（成人資料）不適用，請查兒科劑量參考或會診。</div>`);
+  else if (s.pedsRenal && s.pedsRenal.adjust)
+    notes.push(`<div class="cwarn">⚠ 兒童腎功能下降（Schwartz eGFR ${esc(r1(s.pedsRenal.egfr))} mL/min/1.73m²），本表腎功能調整為成人資料，不適用；請查兒科劑量參考（如 Lexicomp Pediatric、Harriet Lane）或會診。</div>`);
   if (s.conflicts.length)
     notes.push(`<div class="cwarn">⚠ ${esc(s.conflicts.map(c => c.trait.label).join("、"))} 另有具體劑量建議，與上方劑量不是可直接相加的獨立調整，須人工整合後決定。</div>`);
   if (s.baseNeedsCheck)
