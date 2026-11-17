@@ -250,9 +250,9 @@
   .drug.pt details.det{margin:10px 0 12px}
   .drug.pt .disc{margin:0}
   @container (min-width:820px){
-    .drug.pt.open .pbody{grid-template-columns:minmax(340px,1fr) minmax(0,1.35fr)}
+    .drug.pt.open .pbody{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
     .drug.pt.open .pside{padding:10px 16px 4px 0}
-    .drug.pt.open .pmain{position:sticky;top:0}
+
   }
   .dl{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;align-items:baseline}
   .dlk{font-size:12px;font-weight:700;color:var(--hit-text);opacity:.75;white-space:nowrap}
@@ -328,6 +328,17 @@
   .stage .st{font-size:12.5px;font-weight:800;color:var(--accent);margin:1px 0 6px}
   .stage table.ctab{margin:0;min-width:0;width:100%}
   .stage table.ctab td.kk{width:96px}.stage table.ctab td.jj{width:110px}
+
+  /* ===== 版面加寬、卡片內：左＝建議劑量＋判讀流程，右＝參考原文 ===== */
+  .wrap,main{max-width:none}
+  main{padding-left:24px;padding-right:56px}   /* 右側留給工具抽屜把手 */
+  header{padding-left:24px;padding-right:56px}
+  @media (max-width:980px){ main,header{padding-left:12px;padding-right:12px} }
+  .pflow{padding:0 16px 8px}
+  .pflow .cwarn,.pflow .cmiss{margin-left:0;margin-right:0}
+  .drug.pt .pside{padding-top:10px}
+  .drug.pt details.det{margin-top:0}
+  @media (min-width:1500px){ main.layout{grid-template-columns:380px minmax(0,1fr)} }
 </style>
 </head>
 <body>
@@ -1540,8 +1551,8 @@ function personal(rows, terms){
       <div><div class="dn" style="font-size:16px">${hl(r[0], terms)}${r[2] ? `<span class="rt">${esc(r[2])}</span>` : ""}</div>
       <div class="di">${hl(r[1], terms)}</div>${extraBtns(r, "*")}</div>
       </div>
-      <div class="pbody"><div class="pmain">${c.main}</div>
-      <div class="pside">${c.side}${detailBlock(r, s).replace("<details class=\"det\">", "<details class=\"det\" open>")}
+      <div class="pbody"><div class="pmain">${c.main}<div class="pflow">${c.side}</div></div>
+      <div class="pside">${detailBlock(r, s).replace("<details class=\"det\">", "<details class=\"det\" open>")}
       <div class="disc">自動比對僅根據表中文字的數值與族群條件，敘述式條件可能遺漏；多重特性的結論為條列整合，非藥動學運算。請務必核對原文與臨床情境後再決定劑量。</div></div></div>
       </div>`;
   }).join("");
