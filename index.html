@@ -327,7 +327,9 @@
     color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center}
   .stage .st{font-size:12.5px;font-weight:800;color:var(--accent);margin:1px 0 6px}
   .stage table.ctab{margin:0;min-width:0;width:100%}
-  .stage table.ctab td.kk{width:96px}.stage table.ctab td.jj{width:110px}
+  .stage table.ctab td.kk{width:84px}.stage table.ctab td.jj{width:56px}
+  .stage table.ctab .srccol{display:none}
+  .stage table.ctab .srcinline{display:block;font-size:11px;color:var(--muted);margin-top:2px}
 
   /* ===== 版面加寬、卡片內：左＝建議劑量＋判讀流程，右＝參考原文 ===== */
   .wrap,main{max-width:none}
@@ -1473,17 +1475,17 @@ function conclusion(r, s){
     const bsegs = s.base.segs || [];
     if (bsegs.length){
       const srcs = [...new Set(bsegs.map(x => x.src).filter(Boolean))];
-      st2.push({t:s.baseTrait.label, use:!s.base.fromGeneral, v:bsegs.map(x => x.seg).join("\n"), src:srcs.join("／")});
+      st2.push({t:s.baseTrait.label, use:true, v:bsegs.map(x => x.seg).join("\n") + (s.base.fromGeneral ? "\n→ 維持基本劑量" : "\n→ 改用此劑量"), src:srcs.join("／")});
     }
   }
   s.modifiers.forEach(m => {
     const msrcs = [...new Set((m.segs || []).map(x => x.src).filter(Boolean))];
-    st2.push({t:m.trait.label, use:m.kind !== "none", v:m.line || m.text, src:msrcs.join("／")});
+    st2.push({t:m.trait.label, use:true, v:(m.line || m.text) + (m.kind === "none" ? "\n→ 維持基本劑量" : ""), src:msrcs.join("／")});
   });
   const hepT = TRAITS.find(t => t.key === "hep");
   if (hepT && availOK(hepT)) traitCols(hepT).forEach(c => {
     const v = cell(r[c]); if (!v) return;
-    st2.push({t:"肝功能", use:!/^(不需|不須|無需|毋需)/.test(v.trim()), v:(HEAD[c] && !/肝功能/.test(HEAD[c]) ? HEAD[c] + "：" : "") + v, src:srcFor(c, r)});
+    st2.push({t:"肝功能", use:true, v:(HEAD[c] && !/肝功能/.test(HEAD[c]) ? HEAD[c] + "：" : "") + v, src:srcFor(c, r)});
   });
   const whyTable = `<div class="stages">`
     + stage(1, "基本劑量", st1.length ? tbl(st1) : `<div class="cmiss" style="margin:0">表中無一般劑量欄。</div>`)
