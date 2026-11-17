@@ -256,7 +256,8 @@
   }
   .dl{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;align-items:baseline}
   .dlk{font-size:12px;font-weight:700;color:var(--hit-text);opacity:.75;white-space:nowrap}
-  .dl{grid-template-columns:72px 1fr;gap:8px 14px}
+  .drug.pt .dl{grid-template-columns:1fr;gap:2px}
+  .drug.pt .dlv{margin-bottom:8px}.drug.pt .dlv:last-child{margin-bottom:0}
   .drug.pt .concl{padding:14px 18px}
   .dlv{font-size:17px;font-weight:800;line-height:1.4;color:var(--hit-text);white-space:pre-line;word-break:break-word}
   .concl.amb .dlk,.concl.amb .dlv{color:var(--warn-text)}
@@ -1440,10 +1441,12 @@ function conclusion(r, s){
     : `<div class="cdose">無法判定基礎劑量</div>`;
 
   // 判讀依據：分階段呈現 ① 基本劑量 → ② 特殊族群判定
-  const row = x => `<tr class="${x.cls === "none" ? "dimrow" : ""}"><td class="kk">${esc(x.t)}</td>
-      <td class="jj ${x.cls || ""}">${esc(x.k)}</td>
+  /* 只分「採用／未採用」；未採用的列不展開劑量指引 */
+  const row = x => x.use
+    ? `<tr><td class="kk">${esc(x.t)}</td><td class="jj">採用</td>
       <td class="vv">${esc(x.v)}<div class="srcinline">來源：${esc(x.src || "—")}</div></td>
-      <td class="srccol">${srcCell(x.src)}</td></tr>`;
+      <td class="srccol">${srcCell(x.src)}</td></tr>`
+    : `<tr class="dimrow"><td class="kk">${esc(x.t)}</td><td class="jj none">未採用</td><td class="vv"></td><td class="srccol"></td></tr>`;
   const tbl = rows => `<table class="ctab why"><tbody>${rows.map(row).join("")}</tbody></table>`;
   const stage = (n, title, body) => `<div class="stage"><span class="sn">${n}</span><div class="st">${title}</div>${body}</div>`;
 
@@ -1451,8 +1454,7 @@ function conclusion(r, s){
   const st1 = [];
   if (s.general){
     const useGen = !s.base || s.base.fromGeneral || !s.baseTrait;
-    st1.push({t:"一般劑量", k: useGen ? "採用" : "未採用", v:s.general.line,
-      src:(s.general.rows.find(z => z.src) || {}).src || "", cls: useGen ? "" : "none"});
+    st1.push({t:"一般劑量", use:useGen, v:s.general.line, src:(s.general.rows.find(z => z.src) || {}).src || ""});
   }
   // ② 特殊族群判定
   const st2 = [];
@@ -1460,19 +1462,17 @@ function conclusion(r, s){
     const bsegs = s.base.segs || [];
     if (bsegs.length){
       const srcs = [...new Set(bsegs.map(x => x.src).filter(Boolean))];
-      st2.push({t:s.baseTrait.label, k: s.base.fromGeneral ? "不需調整" : "採用族群劑量",
-        v:bsegs.map(x => x.seg).join("\n"), src:srcs.join("／"), cls: s.base.fromGeneral ? "none" : ""});
+      st2.push({t:s.baseTrait.label, use:!s.base.fromGeneral, v:bsegs.map(x => x.seg).join("\n"), src:srcs.join("／")});
     }
   }
   s.modifiers.forEach(m => {
-    const verb = m.kind === "none" ? "不需調整" : m.kind === "dose" ? "另有劑量" : "注意事項";
     const msrcs = [...new Set((m.segs || []).map(x => x.src).filter(Boolean))];
-    st2.push({t:m.trait.label, k:verb, v:m.line || m.text, src:msrcs.join("／"), cls:m.kind});
+    st2.push({t:m.trait.label, use:m.kind !== "none", v:m.line || m.text, src:msrcs.join("／")});
   });
   const hepT = TRAITS.find(t => t.key === "hep");
   if (hepT && availOK(hepT)) traitCols(hepT).forEach(c => {
     const v = cell(r[c]); if (!v) return;
-    st2.push({t:"肝功能", k:"共通資訊", v:(HEAD[c] && !/肝功能/.test(HEAD[c]) ? HEAD[c] + "：" : "") + v, src:srcFor(c, r)});
+    st2.push({t:"肝功能", use:!/^(不需|不須|無需|毋需)/.test(v.trim()), v:(HEAD[c] && !/肝功能/.test(HEAD[c]) ? HEAD[c] + "：" : "") + v, src:srcFor(c, r)});
   });
   const whyTable = `<div class="stages">`
     + stage(1, "基本劑量", st1.length ? tbl(st1) : `<div class="cmiss" style="margin:0">表中無一般劑量欄。</div>`)
