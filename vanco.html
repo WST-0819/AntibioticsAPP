@@ -1000,7 +1000,6 @@ function runInit(){
     b.Ke>0.2?'預估 t½ < 3.5 hr，可能為 ARC 或 CrCl 高估，建議盡早監測濃度。':'',
     dose*(24/tau)>4000?'日劑量 >4 g，通常保留給 <55 歲、>110 kg、CrCl >150 的病人。':'',
     ad.auc>700&&!infErr?'推估 AUC₂₄ >700，明顯偏高，建議降低每日總劑量。':'',
-    b.crcl<15?'預估 CrCl <15，PK 推估不可靠，建議給 LD 後依濃度給藥，或改用 HD 頁。':'',
     rateHi?`輸注速率 ${r(effRate(dose),0)} mg/hr >1000 mg/hr，可能增加 infusion reaction 風險，建議每 1 g 至少輸注 1 hr。`:'',
     ldGapErr?`LD 需輸注 ${r(tiLD,1)} hr，「LD 起始→維持劑量起始」間隔不可短於此時間。`:'',
   ]);
