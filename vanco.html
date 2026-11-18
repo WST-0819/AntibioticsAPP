@@ -725,6 +725,7 @@ function alerts(el,list){$(el).innerHTML=list.filter(Boolean).map(x=>`<li>${x}</
 /* ===== 基礎參數（T7-T18, W11-W14, ZE25, E26, T35, E28）；p='' Initial、p='t_' Trough 頁 ===== */
 /* 範圍檢查（VancoPK validators：SCr 0.5–10 mg/dL；Height 54–85 inch / 137.16–215.9 cm；Weight 29–275 kg / 64–606 lbs） */
 const RANGE={
+  age:(v)=> (v>=18&&v<=120) ? '' : 'Age should be between 18 and 120 years（<18 歲請用特殊族群→小兒）',
   scr:(v)=> (v>0&&v<=10) ? '' : 'SCr should be between 0 and 10 mg/dL',   /* <0.5 允許外推，結果下方顯示警語 */
   ht:(v,p)=> ($(p+'uHt')&&$(p+'uHt').value==='inch')
       ? ((v>=54&&v<=85) ? '' : 'Height should be between 54 and 85 inch')
@@ -739,7 +740,7 @@ function fieldErr(p,k){
   return RANGE[k](v,p);
 }
 function showRangeErr(){
-  ['','t_'].forEach(p=>['scr','ht','wt'].forEach(k=>{
+  ['','t_'].forEach(p=>['age','scr','ht','wt'].forEach(k=>{
     const el=$(p+k); if(!el) return;
     const cell=el.closest('.grid > div')||el.parentNode;
     let d=document.getElementById('rerr_'+p+k);
@@ -750,7 +751,7 @@ function showRangeErr(){
 document.addEventListener('input',showRangeErr); document.addEventListener('change',showRangeErr);
 function patientOK(p){
   return ['age','scr','ht','wt'].every(id=>isFinite(num(p+id))&&num(p+id)>0)
-      && ['scr','ht','wt'].every(k=>!fieldErr(p,k));
+      && ['age','scr','ht','wt'].every(k=>!fieldErr(p,k));
 }
 function base(p=''){
   const g=id=>$(p+id);
@@ -767,10 +768,10 @@ function base(p=''){
   const w11 = bmi<25 ? wt : ibw+0.4*(wt-ibw);
   const w13 = sex==='M'?1:0.85;
   const cap = age<40?200:age<50?185:age<60?170:age<70?155:age<80?140:age<90?125:110;
-  const crcl = Math.min(((140-age)*w13*w11)/(72*scr), cap);
+  const crcl = Math.max(Math.min(((140-age)*w13*w11)/(72*scr), cap), 0);   /* 最低 0 */
   const CLv = ((0.75*crcl)+4)*0.06;
   const Vd = 0.29*age + 0.33*wt + 11;
-  const Ke = Math.max(CLv/Vd,0.008);   /* 不設上限，>0.2 於結果下方警示 */
+  const Ke = CLv/Vd;   /* 不設上下限，Ke 與 CLvanco 一致（CLvanco ≥0.24 L/hr 非腎清除）；>0.2 於結果下方警示 */
   return {age,scr,scrIn,htIn,wt,sex,bmi,ibw,w11,crcl,CLv,Vd,Ke,half:0.693/Ke,idmsOn,capped:crcl>=cap-1e-9};
 }
 
@@ -843,7 +844,7 @@ function suggest(pk,ctx,cap){
   const g=goal(ctx), all=[];
   for(const tau of [6,8,12,24,36,48]) for(let dose=500;dose<=cap;dose+=250){
     const n=ss(dose,tau,pk.Ke,pk.Vd), auc=auc24(dose,tau,pk.Ke,pk.Vd,pk.CL), daily=dose*24/tau;
-    if(daily>4000) continue;
+    if(daily>4000 || n.ti>=tau) continue;   /* 輸注時間 ≥ 給藥間隔者不採用 */
     all.push({dose,tau,auc,Cmin:n.Cmin,
       aucOK:auc>=400&&auc<=600, trOK:n.Cmin>=g.lo&&n.Cmin<=g.hi,
       trD:n.Cmin<g.lo?g.lo-n.Cmin:(n.Cmin>g.hi?n.Cmin-g.hi:0)});
@@ -870,7 +871,7 @@ function troughCandidates(pk,ctx){
     else if(n.Cmin<TLO&&dose<3000){dose+=250;n=ss(dose,tau,Ke,Vd);}
     const daily=dose*24/tau;
     out.push({dose,tau,...n,daily,auc:auc24(dose,tau,Ke,Vd,CL),
-      ok:n.Cmin>=TLO&&n.Cmin<=THI&&daily<=4000});
+      ok:n.Cmin>=TLO&&n.Cmin<=THI&&daily<=4000&&n.ti<tau});
   }
   const pref=LN((Vd<=75?35:30)/15)/Ke;
   const ok8=out.filter(x=>x.ok&&x.tau!==6), okList=ok8.length?ok8:out.filter(x=>x.ok);   /* Q6H 最後才選 */
@@ -962,7 +963,9 @@ function run(){
 /* ===================== Initial Dosing ===================== */
 function runInit(){
   useRate('init');
-  if(!patientOK('')){ $('pkNote').innerHTML='<span style="color:var(--warn)">請先完整填寫病人資料，並修正超出範圍的數值</span>'; showRangeErr(); S.init.pk=null; return; }
+  if(!patientOK('')){
+    ['pk','tInit','fInit','aInit','rateNote'].forEach(id=>$(id).innerHTML='');   /* 清除前次結果，避免誤用 */
+    $('pkNote').innerHTML='<span style="color:var(--warn)">請先完整填寫病人資料，並修正超出範圍的數值</span>'; showRangeErr(); S.init.pk=null; return; }
   const b=base('');
   /* 直接標示各參數依據的體重 */
   const wLbl = b.bmi<25 ? `TBW ${r(b.wt,1)} kg` : `AdjBW ${r(b.w11,1)} kg`;
@@ -975,20 +978,31 @@ function runInit(){
   const {dose,tau}=syncRegimen('init',suggest(pk,'init',2000));
   const ad=adoptedRows(pk,dose,tau);
   const LD=parseFloat($('ld').value), gap=num('ldgap');
-  let ldRows=[], peakLD=NaN;
+  let ldRows=[], peakLD=NaN, ldGapErr=false, tiLD=NaN;
   if(LD>0){
-    const tiLD=Tinf(LD);
+    tiLD=Tinf(LD);
     peakLD=(LD*(1-EXP(-b.Ke*tiLD)))/(tiLD*b.Ke*(b.Vd*1.25));
-    ldRows=[['LD Peak',r(peakLD,1),'mg/L'],['維持劑量開始時濃度',r(peakLD*EXP(-b.Ke*(gap-tiLD)),1),'mg/L']];
+    ldGapErr = gap>0 && gap<tiLD;
+    ldRows=[['LD Peak',r(peakLD,1),'mg/L'],['維持劑量開始時濃度',ldGapErr?'—':r(peakLD*EXP(-b.Ke*(gap-tiLD)),1),'mg/L']];
   }
-  tbl('tInit',[...ad.rows,...ldRows]); keyChips('tInit','init',ad);
-  $('fInit').innerHTML=flagHTML('init',ad.auc,ad.Cmin);
+  const tiM=Tinf(dose), infErr=tiM>=tau, rateHi=effRate(dose)>1000;
+  if(infErr){
+    /* 輸注時間 ≥ 給藥間隔：穩態公式不成立，不顯示濃度 */
+    tbl('tInit',[]);
+    $('fInit').innerHTML=`<div class="err">輸注時間 ${r(tiM,1)} hr ≥ 給藥間隔 Q${tau}H，無法推估濃度。請提高輸注速率或延長給藥間隔。</div>`;
+  } else {
+    tbl('tInit',[...ad.rows,...ldRows]); keyChips('tInit','init',ad);
+    $('fInit').innerHTML=flagHTML('init',ad.auc,ad.Cmin);
+  }
   $('rateNote').innerHTML = rateAuto()? `自動 ${r(effRate(dose),0)} mg/hr・輸注 ${r(Tinf(dose),1)} hr` : `輸注 ${r(Tinf(dose),1)} hr`;
   alerts('aInit',[
     b.scrIn<0.5?'SCr < 0.5，此計算結果為外推數值，CrCl 可能高估，建議盡早監測濃度。':'',
     b.Ke>0.2?'預估 t½ < 3.5 hr，可能為 ARC 或 CrCl 高估，建議盡早監測濃度。':'',
     dose*(24/tau)>4000?'日劑量 >4 g，通常保留給 <55 歲、>110 kg、CrCl >150 的病人。':'',
-    ad.auc>700?'推估 AUC₂₄ >700，明顯偏高，建議降低每日總劑量。':'',
+    ad.auc>700&&!infErr?'推估 AUC₂₄ >700，明顯偏高，建議降低每日總劑量。':'',
+    b.crcl<15?'預估 CrCl <15，PK 推估不可靠，建議給 LD 後依濃度給藥，或改用 HD 頁。':'',
+    rateHi?`輸注速率 ${r(effRate(dose),0)} mg/hr >1000 mg/hr，可能增加 infusion reaction 風險，建議每 1 g 至少輸注 1 hr。`:'',
+    ldGapErr?`LD 需輸注 ${r(tiLD,1)} hr，「LD 起始→維持劑量起始」間隔不可短於此時間。`:'',
   ]);
 }
 
