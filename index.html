@@ -1501,6 +1501,14 @@ function obeseDoseWeight(r, p){
   }
   return {w, tag, how, formula, f};
 }
+// 體重劑量代入體重：肥胖 → obeseDoseWeight；其餘（一般成人、兒科、低體重）→ 實際體重 TBW
+function doseWeight(r, p){
+  const ob = obeseDoseWeight(r, p);
+  if (ob) return ob;
+  if (!p.wt) return null;
+  const peds = p.age != null && p.age < 18;
+  return {w:p.wt, tag:"TBW", how:peds ? "兒科，以實際體重" : "非肥胖，以實際體重", formula:"", f:null, plain:true};
+}
 // 把 "15 mg/kg/dose"、"10-20 mg/kg q12h" 換算成實際劑量
 function obwCalc(v, dw){
   if (!dw || dw.na || !v) return [];
@@ -1541,7 +1549,7 @@ function conclusion(r, s){
   const main = kidNoPeds
     ? `<div class="cdose">表中無兒科劑量資料，不提供建議劑量</div>`
     : s.base
-    ? doseLines(s.base.rows, obeseDoseWeight(r, p))
+    ? doseLines(s.base.rows, doseWeight(r, p))
     : `<div class="cdose">無法判定基礎劑量</div>`;
 
   // 判讀依據：分階段呈現 ① 基本劑量 → ② 特殊族群判定
@@ -1599,12 +1607,12 @@ function conclusion(r, s){
       ? `<div class="cwarn">⚠ 目前建議為腎功能正常者劑量，本表尚無小兒${esc(s.pedsRenal.dial)}調整資料，請參考UpToDate、Micromedex 確認劑量。</div>`
       : `<div class="cwarn">⚠ 目前建議為腎功能正常者劑量，本表尚無小兒腎功能調整資料，請依腎功能${eg}參考UpToDate、Micromedex 確認劑量。</div>`);
   }
-  const dwInfo = kidNoPeds ? null : obeseDoseWeight(r, p);
+  const dwInfo = kidNoPeds ? null : doseWeight(r, p);
   if (dwInfo){
     const hasKg = [...((s.base && s.base.rows) || []).map(x => x.v), ...s.modifiers.filter(m => m.trait.key === "obese").map(m => m.line || m.text)]
       .some(v => obwCalc(v, dwInfo.na ? {w:1, tag:""} : dwInfo).length);
     if (dwInfo.na){ if (hasKg) topw.push(`<div class="cwarn">⚠ ${esc(dwInfo.msg)}</div>`); }
-    else if (hasKg) topw.push(`<div class="cobw">肥胖族群：體重劑量以 ${esc(dwInfo.tag)} ${esc(r1(dwInfo.w))} kg 換算（${esc(dwInfo.how)}${dwInfo.tag === "AdjBW" ? "：" + esc(dwInfo.formula) : ""}）。請確認是否超過最大劑量。</div>`);
+    else if (hasKg) topw.push(`<div class="cobw">${dwInfo.plain ? "" : "肥胖族群："}體重劑量以 ${esc(dwInfo.tag)} ${esc(r1(dwInfo.w))} kg 換算（${esc(dwInfo.how)}${dwInfo.tag === "AdjBW" ? "：" + esc(dwInfo.formula) : ""}）。換算值未套用最大劑量，請自行確認上限。</div>`);
   }
   if (s.conflicts.length)
     notes.push(`<div class="cwarn">⚠ ${esc(s.conflicts.map(c => c.trait.label).join("、"))} 另有具體劑量建議，與上方劑量不是可直接相加的獨立調整，須人工整合後決定。</div>`);
