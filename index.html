@@ -958,8 +958,15 @@ function doseOf(seg){
   const i = seg.search(/[：:]/);
   if (i > -1 && i < seg.length - 1){
     const left = seg.slice(0, i), right = seg.slice(i + 1).trim();
-    if (right && (numConds(left).length || dialTags(left).length ||
-        new RegExp(KW + "|bmi|體重|年齡", "i").test(left))) return right.replace(/[；;，,、]\s*$/, "");
+    const isCond = s => numConds(s).length || dialTags(s).length ||
+          new RegExp(KW + "|bmi|體重|年齡", "i").test(s);
+    if (right && isCond(left)){
+      // 條件在前一行、冒號前是適應症標籤（如 HSV）→ 只去掉條件行，保留標籤
+      const nl = left.lastIndexOf("\n");
+      const tail = nl > -1 ? left.slice(nl + 1).trim() : "";
+      if (tail && !isCond(tail)) return seg.slice(nl + 1).trim().replace(/[；;，,、]\s*$/, "");
+      return right.replace(/[；;，,、]\s*$/, "");
+    }
   }
   return seg.replace(/[；;]\s*$/, "");
 }
