@@ -259,6 +259,8 @@
   .drug.pt .dl{grid-template-columns:1fr;gap:2px}
   .drug.pt .dlv{margin-bottom:8px}.drug.pt .dlv:last-child{margin-bottom:0}
   .drug.pt .concl{padding:14px 18px}
+  .cobw{margin-top:10px;font-size:12.5px;font-weight:700;padding:8px 10px;border-radius:8px;background:var(--card);color:var(--text);border:1px solid var(--hit-line);line-height:1.5}
+  .dlv .obw{display:block;font-size:.82em;font-weight:700;opacity:.9}
   .dlv{font-size:17px;font-weight:800;line-height:1.4;color:var(--hit-text);white-space:pre-line;word-break:break-word}
   .concl.amb .dlk,.concl.amb .dlv{color:var(--warn-text)}
   .drug.pt .cbase{margin-top:6px;font-size:11.5px}
@@ -1459,11 +1461,64 @@ function doseTable(rows, cls){
 }
 
 // 精簡版最終劑量：只列有值的項目，不顯示來源欄
-function doseLines(rows){
+function doseLines(rows, dw){
   rows = (rows || []).filter(x => !x.none && x.v && x.v !== "—");
   if (!rows.length) return `<div class="cdose">—</div>`;
   return `<div class="dl">` + rows.map(x =>
-    `<div class="dlk">${esc(x.k)}</div><div class="dlv">${esc(x.v)}</div>`).join("") + `</div>`;
+    `<div class="dlk">${esc(x.k)}</div><div class="dlv">${esc(x.v)}${obwCalcHtml(x.v, dw)}</div>`).join("") + `</div>`;
+}
+
+/* ---------- 肥胖：劑量體重 ----------
+   步驟一：需不需要用 AdjBW → 只有個人化建議中「肥胖」族群成立（成人 BMI ≥30 或 TBW > 1.2×IBW）才啟動
+   步驟二：用什麼公式 → 肥胖欄位有寫明公式／體重種類就照欄位，否則預設 AdjBW = IBW + 0.4 ×（TBW − IBW） */
+function obeseDoseWeight(r, p){
+  const obT = TRAITS.find(t => t.key === "obese");
+  if (!obT || !availOK(obT) || !obT.active(p)) return null;
+  const txt = traitCols(obT).map(c => cell(r[c])).filter(Boolean).join("\n");
+  if (!p.ibw || !p.wt)
+    return {na:true, msg:"病人屬肥胖族群，但無法計算 IBW／AdjBW（需要身高，且 Devine 公式限身高 ≥152 cm），mg/kg 劑量未換算。"};
+  const T = "(?:tbw|abw|actual\\s*(?:body\\s*)?weight|total\\s*body\\s*weight|實際體重|體重)";
+  const fRe = new RegExp("ibw\\s*\\+\\s*(\\d*\\.?\\d+)\\s*(%?)\\s*[×x*]?\\s*[(（]\\s*" + T + "\\s*[-−–]\\s*ibw\\s*[)）]", "i");
+  const m = txt.match(fRe);
+  let f = null, kind = "adj", how = "欄位未指定 → 預設";
+  if (m){
+    f = parseFloat(m[1]); if (m[2] || f >= 1) f = f / 100;
+    if (!(f > 0 && f < 1)) f = null; else how = "依欄位公式";
+  }
+  if (f == null){
+    f = 0.4;
+    if (/adj(?:usted)?\s*(?:body\s*)?(?:weight|bw)|adjbw|dosing\s*(?:body\s*)?weight|調整體重/i.test(txt)) how = "依欄位（AdjBW）";
+    else if (/\bibw\b|ideal\s*(?:body\s*)?weight|理想體重/i.test(txt)){ kind = "ibw"; how = "依欄位（IBW）"; }
+    else if (/\btbw\b|actual\s*(?:body\s*)?weight|total\s*body\s*weight|實際體重/i.test(txt)){ kind = "tbw"; how = "依欄位（TBW）"; }
+    else if (/\babw\b/i.test(txt)) how = "欄位寫 ABW（actual／adjusted 不明）→ 暫用";
+  }
+  let w, tag, formula;
+  if (kind === "ibw"){ w = p.ibw; tag = "IBW"; formula = "Devine IBW"; }
+  else if (kind === "tbw"){ w = p.wt; tag = "TBW"; formula = "實際體重"; }
+  else {
+    w = p.wt > p.ibw ? p.ibw + f * (p.wt - p.ibw) : p.wt; tag = "AdjBW";
+    formula = `IBW ${r1(p.ibw)} + ${f} ×（TBW ${r1(p.wt)} − IBW ${r1(p.ibw)}）`;
+  }
+  return {w, tag, how, formula, f};
+}
+// 把 "15 mg/kg/dose"、"10-20 mg/kg q12h" 換算成實際劑量
+function obwCalc(v, dw){
+  if (!dw || dw.na || !v) return [];
+  const out = [], seen = new Set();
+  const re = /(\d+(?:\.\d+)?)(?:\s*[-–~～]\s*(\d+(?:\.\d+)?))?\s*(mg|mcg|µg|ug|g|units?|u|iu)\s*\/\s*kg(\s*\/\s*(?:dose|day|d|hr|h|min))?/gi;
+  let m;
+  while ((m = re.exec(v))){
+    const a = parseFloat(m[1]), b = m[2] ? parseFloat(m[2]) : null;
+    const fmt = n => { const x = n * dw.w; return (x >= 100 ? Math.round(x) : Math.round(x * 10) / 10).toLocaleString("en-US"); };
+    const per = m[4] ? m[4].replace(/\s+/g, "") : "";
+    const s = `${m[0].trim()} → ${fmt(a)}${b != null ? "–" + fmt(b) : ""} ${m[3]}${per}`;
+    if (!seen.has(s)){ seen.add(s); out.push(s); }
+  }
+  return out;
+}
+function obwCalcHtml(v, dw){
+  const xs = obwCalc(v, dw);
+  return xs.length ? `<span class="obw">（${esc(dw.tag)} ${esc(r1(dw.w))} kg）${esc(xs.join("；"))}</span>` : "";
 }
 const PT_OPEN = new Set();
 function ptToggle(btn){
@@ -1486,7 +1541,7 @@ function conclusion(r, s){
   const main = kidNoPeds
     ? `<div class="cdose">表中無兒科劑量資料，不提供建議劑量</div>`
     : s.base
-    ? doseLines(s.base.rows)
+    ? doseLines(s.base.rows, obeseDoseWeight(r, p))
     : `<div class="cdose">無法判定基礎劑量</div>`;
 
   // 判讀依據：分階段呈現 ① 基本劑量 → ② 特殊族群判定
@@ -1517,7 +1572,9 @@ function conclusion(r, s){
   }
   s.modifiers.forEach(m => {
     const msrcs = [...new Set((m.segs || []).map(x => x.src).filter(Boolean))];
-    st2.push({t:m.trait.label, use:true, v:(m.line || m.text), src:msrcs.join("／")});
+    let mv = (m.line || m.text);
+    if (m.trait.key === "obese"){ const xs = obwCalc(mv, obeseDoseWeight(r, p)); if (xs.length) mv += "\n" + xs.join("；"); }
+    st2.push({t:m.trait.label, use:true, v:mv, src:msrcs.join("／")});
   });
   if (s.pedsRenal) st2.push({t:s.pedsRenal.dial ? "腎臟替代治療" : "腎功能", use:false, note:"表內為成人資料，兒童不適用"});
   const hepT = TRAITS.find(t => t.key === "hep");
@@ -1541,6 +1598,13 @@ function conclusion(r, s){
     topw.push(s.pedsRenal.dial
       ? `<div class="cwarn">⚠ 目前建議為腎功能正常者劑量，本表尚無小兒${esc(s.pedsRenal.dial)}調整資料，請參考UpToDate、Micromedex 確認劑量。</div>`
       : `<div class="cwarn">⚠ 目前建議為腎功能正常者劑量，本表尚無小兒腎功能調整資料，請依腎功能${eg}參考UpToDate、Micromedex 確認劑量。</div>`);
+  }
+  const dwInfo = kidNoPeds ? null : obeseDoseWeight(r, p);
+  if (dwInfo){
+    const hasKg = [...((s.base && s.base.rows) || []).map(x => x.v), ...s.modifiers.filter(m => m.trait.key === "obese").map(m => m.line || m.text)]
+      .some(v => obwCalc(v, dwInfo.na ? {w:1, tag:""} : dwInfo).length);
+    if (dwInfo.na){ if (hasKg) topw.push(`<div class="cwarn">⚠ ${esc(dwInfo.msg)}</div>`); }
+    else if (hasKg) topw.push(`<div class="cobw">肥胖族群：體重劑量以 ${esc(dwInfo.tag)} ${esc(r1(dwInfo.w))} kg 換算（${esc(dwInfo.how)}${dwInfo.tag === "AdjBW" ? "：" + esc(dwInfo.formula) : ""}）。請確認是否超過最大劑量。</div>`);
   }
   if (s.conflicts.length)
     notes.push(`<div class="cwarn">⚠ ${esc(s.conflicts.map(c => c.trait.label).join("、"))} 另有具體劑量建議，與上方劑量不是可直接相加的獨立調整，須人工整合後決定。</div>`);
