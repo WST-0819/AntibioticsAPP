@@ -260,7 +260,7 @@
   .drug.pt .dlv{margin-bottom:8px}.drug.pt .dlv:last-child{margin-bottom:0}
   .drug.pt .concl{padding:14px 18px}
   .cobw{margin-top:10px;font-size:12.5px;font-weight:700;padding:8px 10px;border-radius:8px;background:var(--card);color:var(--text);border:1px solid var(--hit-line);line-height:1.5}
-  .dlv .obw{display:block;font-size:.82em;font-weight:700;opacity:.9}
+  .tipi.calc{width:auto;height:auto;padding:1px 4px;border-radius:6px;font-size:13px;vertical-align:super;margin-left:6px;line-height:1.2}
   .dlv{font-size:17px;font-weight:800;line-height:1.4;color:var(--hit-text);white-space:pre-line;word-break:break-word}
   .concl.amb .dlk,.concl.amb .dlv{color:var(--warn-text)}
   .drug.pt .cbase{margin-top:6px;font-size:11.5px}
@@ -1526,7 +1526,13 @@ function obwCalc(v, dw){
 }
 function obwCalcHtml(v, dw){
   const xs = obwCalc(v, dw);
-  return xs.length ? `<span class="obw">（${esc(dw.tag)} ${esc(r1(dw.w))} kg）${esc(xs.join("；"))}</span>` : "";
+  if (!xs.length) return "";
+  const tip = ["依體重計算劑量",
+    `體重：${dw.tag} ${r1(dw.w)} kg（${dw.plain ? "" : "肥胖族群，"}${dw.how}）`,
+    dw.tag === "AdjBW" ? `公式：${dw.formula}` : "",
+    ...xs,
+    "※ 換算值未套用最大劑量，請自行確認上限"].filter(Boolean).join("\n");
+  return `<span class="tipi calc" data-tip="${esc(tip)}" aria-label="依體重計算劑量">🧮</span>`;
 }
 const PT_OPEN = new Set();
 function ptToggle(btn){
@@ -1612,7 +1618,6 @@ function conclusion(r, s){
     const hasKg = [...((s.base && s.base.rows) || []).map(x => x.v), ...s.modifiers.filter(m => m.trait.key === "obese").map(m => m.line || m.text)]
       .some(v => obwCalc(v, dwInfo.na ? {w:1, tag:""} : dwInfo).length);
     if (dwInfo.na){ if (hasKg) topw.push(`<div class="cwarn">⚠ ${esc(dwInfo.msg)}</div>`); }
-    else if (hasKg) topw.push(`<div class="cobw">${dwInfo.plain ? "" : "肥胖族群："}體重劑量以 ${esc(dwInfo.tag)} ${esc(r1(dwInfo.w))} kg 換算（${esc(dwInfo.how)}${dwInfo.tag === "AdjBW" ? "：" + esc(dwInfo.formula) : ""}）。換算值未套用最大劑量，請自行確認上限。</div>`);
   }
   if (s.conflicts.length)
     notes.push(`<div class="cwarn">⚠ ${esc(s.conflicts.map(c => c.trait.label).join("、"))} 另有具體劑量建議，與上方劑量不是可直接相加的獨立調整，須人工整合後決定。</div>`);
