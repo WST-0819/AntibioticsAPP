@@ -1502,13 +1502,24 @@ function eiHint(r, s, p){
   const er = eiSibling(r);
   if (!er || (p.age != null && p.age < 18)) return null;
   const es = synth(er);
-  const name = (er[0] || "").replace(/\s+/g, " ").trim();
-  // 一般列依腎功能／透析需要調整時，EI 列也要有對應段落才給劑量，不拿腎功能正常的 EI 劑量硬套
-  const adjKey = s.baseTrait && ["renal", "dial"].includes(s.baseTrait.key) && !s.base.fromGeneral ? s.baseTrait.key : null;
-  const ok = es.base && (!adjKey || (es.baseTrait && es.baseTrait.key === adjKey && !es.baseNeedsCheck));
-  if (!ok) return {off:true, msg:`目前${adjKey === "dial" ? "透析" : "腎功能"}條件在 EI 資料中無對應建議，請參考 UpToDate、Micromedex`};
-  return {off:false, rows:es.base.rows.filter(x => !x.none && x.v && x.v !== "—"),
-          adj:es.baseTrait && !es.base.fromGeneral ? es.baseTrait.label : ""};
+  const NA = {off:true, msg:"無相關資訊"};
+  const rowsOK = rows => (rows || []).filter(x => !x.none && x.v && x.v !== "—" && !/[：:]\s*$/.test(x.v));
+  // EI 依目前病人的腎功能／透析條件，到 EI 列對應的欄位檢索（透析優先）
+  const acts = activeTraits();
+  const t = acts.find(x => x.key === "dial") || acts.find(x => x.key === "renal") || null;
+  if (t){
+    const rv = resolveTrait(er, t);
+    const got = rv.kind ? rowsOK(rv.rows) : [];
+    if (!rv.hasCol || !got.length) return NA;           // 該欄空白，或沒有比中有內容的條文
+    // 「不須調整」且 EI 列本身有一般劑量 → 用 EI 一般劑量；否則直接列出比中的條文
+    if (rv.kind === "none" && es.general){
+      const g = rowsOK(es.general.rows);
+      if (g.length) return {off:false, rows:g, adj:""};
+    }
+    return {off:false, rows:got, adj:t.label};
+  }
+  const b = es.base ? rowsOK(es.base.rows) : [];
+  return b.length ? {off:false, rows:b, adj:""} : NA;
 }
 function doseLines(rows, dw, ei){
   rows = (rows || []).filter(x => !x.none && x.v && x.v !== "—");
