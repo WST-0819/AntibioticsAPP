@@ -296,8 +296,19 @@
   .tipi{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;margin-left:5px;
     border:1px solid var(--muted);border-radius:50%;color:var(--muted);font:italic 700 10px/1 Georgia,serif;
     cursor:help;vertical-align:middle;user-select:none;flex:none;text-transform:none;letter-spacing:0}
-  .tipi.ei{width:auto;height:auto;padding:1px 6px;border-radius:6px;font:700 11px/1.3 system-ui,sans-serif;vertical-align:2px;margin-left:8px}
-  .tipi.ei.off{border-style:dashed;opacity:.6}
+  .dtw{overflow-x:auto}
+  .dtab{border-collapse:collapse;width:auto;background:transparent;margin:0}
+  .dtab th{position:static;background:transparent;text-align:left;font-size:12px;font-weight:700;color:var(--hit-text);opacity:.75;
+    letter-spacing:0;text-transform:none;padding:0 32px 4px 0;white-space:nowrap;border:0}
+  .dtab td{font-size:17px;font-weight:800;line-height:1.4;color:var(--hit-text);padding:5px 32px 5px 0;vertical-align:top;
+    white-space:pre-line;word-break:break-word;border:0;border-top:1px solid var(--hit-line)}
+  .dtab tbody tr:first-child td{border-top:0}
+  .dtab td.wc{opacity:.85}
+  .dtab tr.eir td{border-top:1px dashed var(--hit-line);font-size:15px}
+  .dtab .eitag{display:inline-block;margin-right:8px;padding:0 6px;border:1px solid currentColor;border-radius:5px;font-size:11px;font-weight:800;vertical-align:2px}
+  .dtab .eioff{font-size:13px;font-weight:600;opacity:.7}
+  .concl.amb .dtab th,.concl.amb .dtab td{color:var(--warn-text)}.concl.amb .dtab td{border-top-color:var(--warn-line)}
+  tbody tr:nth-child(even) .dtab td,.dtab tr:nth-child(even){background:transparent}
   .tipi:hover,.tipi.on{background:var(--accent);border-color:var(--accent);color:#fff}
   #tip{position:fixed;z-index:999;display:none;max-width:360px;padding:9px 11px;border-radius:7px;
     background:#1f2933;color:#f1f5f9;font-size:12.5px;line-height:1.6;white-space:pre-line;
@@ -1480,22 +1491,52 @@ function eiHint(r, s, p){
   // 一般列依腎功能／透析需要調整時，EI 列也要有對應段落才給劑量，不拿腎功能正常的 EI 劑量硬套
   const adjKey = s.baseTrait && ["renal", "dial"].includes(s.baseTrait.key) && !s.base.fromGeneral ? s.baseTrait.key : null;
   const ok = es.base && (!adjKey || (es.baseTrait && es.baseTrait.key === adjKey && !es.baseNeedsCheck));
-  if (!ok) return {off:true, tip:`${name}\n目前病人條件（${adjKey === "dial" ? "透析" : "腎功能"}）在 EI 資料中無對應建議，請參考 UpToDate、Micromedex。`};
-  const lines = es.base.rows.filter(x => !x.none && x.v && x.v !== "—").map(x => `${x.k}：${x.v}`);
-  const src = cell(er[8]);
-  return {off:false, tip:[name, ...lines, es.baseTrait && !es.base.fromGeneral ? `（依${es.baseTrait.label}調整）` : "", src ? "來源：" + src : ""].filter(Boolean).join("\n")};
+  if (!ok) return {off:true, msg:`目前${adjKey === "dial" ? "透析" : "腎功能"}條件在 EI 資料中無對應建議，請參考 UpToDate、Micromedex`};
+  return {off:false, rows:es.base.rows.filter(x => !x.none && x.v && x.v !== "—"),
+          adj:es.baseTrait && !es.base.fromGeneral ? es.baseTrait.label : ""};
 }
 function doseLines(rows, dw, ei){
   rows = (rows || []).filter(x => !x.none && x.v && x.v !== "—");
   if (!rows.length) return `<div class="cdose">—</div>`;
-  const doseIdx = Math.max(0, rows.findIndex(x => /劑量/.test(x.k)));
-  // 有 mg/kg 的項目後面插一欄「目前體重換算」，與維持劑量、頻率平行
-  return `<div class="dl">` + rows.map((x, i) => {
-    const xs = obwCalc(x.v, dw);
-    const hint = ei && i === doseIdx ? `<span class="tipi ei${ei.off ? " off" : ""}" data-tip="${esc(ei.tip)}">EI</span>` : "";
-    return `<div class="dlk">${esc(x.k)}</div><div class="dlv">${esc(x.v)}${hint}</div>` +
-      (xs.length ? `<div class="dlk">目前體重換算（${esc(dw.tag)} ${esc(r1(dw.w))} kg）</div><div class="dlv wcalc">${esc(xs.join("\n"))}</div>` : "");
-  }).join("") + `</div>`;
+  // 表格呈現：欄＝項目（劑量／目前體重換算／頻率…），列＝原文各行，列與列之間有格線
+  const di = Math.max(0, rows.findIndex(x => /劑量/.test(x.k)));
+  const cols = [];
+  rows.forEach((x, i) => {
+    const ls = String(x.v).split("\n").map(l => l.trim()).filter(Boolean);
+    cols.push({k:x.k, ls});
+    if (i === di){
+      const cs = ls.map(l => obwCalc(l, dw).map(t => t.replace(/^[^：]*：/, "")).join("；"));
+      if (cs.some(Boolean)) cols.push({k:`目前體重換算（${dw.tag} ${r1(dw.w)} kg）`, ls:cs, calc:true});
+    }
+  });
+  const n = Math.max(...cols.map(c => c.ls.length));
+  const td = (c, j) => {
+    if (c.ls.length === 1 && n > 1) return j === 0 ? `<td rowspan="${n}"${c.calc ? ' class="wc"' : ""}>${esc(c.ls[0])}</td>` : "";
+    return `<td${c.calc ? ' class="wc"' : ""}>${esc(c.ls[j] || "")}</td>`;
+  };
+  let body = "";
+  for (let j = 0; j < n; j++) body += `<tr>${cols.map(c => td(c, j)).join("")}</tr>`;
+  // 延長輸注（資料表的 (Extended infusion) 列）：同一張表最後一列，依欄位對齊
+  if (ei){
+    if (ei.off) body += `<tr class="eir"><td colspan="${cols.length}"><span class="eitag">延長輸注</span><span class="eioff">${esc(ei.msg)}</span></td></tr>`;
+    else {
+      const used = new Set();
+      const cells = cols.map((c, ci) => {
+        let v = "";
+        if (c.calc){
+          const d = ei.rows.find(x => /劑量/.test(x.k));
+          v = d ? obwCalc(d.v, dw).map(t => t.replace(/^[^：]*：/, "")).join("；") : "";
+        } else {
+          const m = ei.rows.find(x => !used.has(x) && (x.k === c.k || (/劑量/.test(x.k) && /劑量/.test(c.k))));
+          if (m){ used.add(m); v = m.v; }
+        }
+        return {ci, v, calc:c.calc};
+      });
+      ei.rows.filter(x => !used.has(x)).forEach(x => { cells[di].v += (cells[di].v ? "\n" : "") + x.k + "：" + x.v; });
+      body += `<tr class="eir">` + cells.map(c => `<td${c.calc ? ' class="wc"' : ""}>${c.ci === di ? `<span class="eitag">延長輸注${ei.adj ? "・依" + esc(ei.adj) : ""}</span>` : ""}${esc(c.v)}</td>`).join("") + `</tr>`;
+    }
+  }
+  return `<div class="dtw"><table class="dtab"><thead><tr>${cols.map(c => `<th>${esc(c.k)}</th>`).join("")}</tr></thead><tbody>${body}</tbody></table></div>`;
 }
 
 /* ---------- 肥胖：劑量體重 ----------
