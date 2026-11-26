@@ -1466,29 +1466,34 @@ function doseTable(rows, cls){
 }
 
 // 精簡版最終劑量：只列有值的項目，不顯示來源欄
-// 延長輸注（EI）：表格內以「EI：」開頭的行，從劑量中抽出，改成劑量後的 EI 小提示（滑過／點擊顯示）
-const RE_EI_LINE = /^\s*(?:EI|extended\s*infusion|延長輸注)\s*[：:]\s*/i;
-const hasEI = r => (r || []).some(v => typeof v === "string" && v.split("\n").some(l => RE_EI_LINE.test(l)));
-function doseLines(rows, dw, eiAny){
+// 延長輸注（EI）：資料表中「藥名 (Extended infusion)」那一列，依成分＋途徑掛到同藥的一般列，在劑量後以 EI 小提示呈現
+const isEIRow = r => /extended\s*infusion|延長輸注/i.test(r[0] || "");
+function eiSibling(r){
+  if (isEIRow(r)) return null;
+  return ROWS.find(x => isEIRow(x) && (x[1] || "").trim() === (r[1] || "").trim() && (x[2] || "").trim() === (r[2] || "").trim()) || null;
+}
+function eiHint(r, s, p){
+  const er = eiSibling(r);
+  if (!er || (p.age != null && p.age < 18)) return null;
+  const es = synth(er);
+  const name = (er[0] || "").replace(/\s+/g, " ").trim();
+  // 一般列依腎功能／透析需要調整時，EI 列也要有對應段落才給劑量，不拿腎功能正常的 EI 劑量硬套
+  const adjKey = s.baseTrait && ["renal", "dial"].includes(s.baseTrait.key) && !s.base.fromGeneral ? s.baseTrait.key : null;
+  const ok = es.base && (!adjKey || (es.baseTrait && es.baseTrait.key === adjKey && !es.baseNeedsCheck));
+  if (!ok) return {off:true, tip:`${name}\n目前病人條件（${adjKey === "dial" ? "透析" : "腎功能"}）在 EI 資料中無對應建議，請參考 UpToDate、Micromedex。`};
+  const lines = es.base.rows.filter(x => !x.none && x.v && x.v !== "—").map(x => `${x.k}：${x.v}`);
+  const src = cell(er[8]);
+  return {off:false, tip:[name, ...lines, es.baseTrait && !es.base.fromGeneral ? `（依${es.baseTrait.label}調整）` : "", src ? "來源：" + src : ""].filter(Boolean).join("\n")};
+}
+function doseLines(rows, dw, ei){
   rows = (rows || []).filter(x => !x.none && x.v && x.v !== "—");
   if (!rows.length) return `<div class="cdose">—</div>`;
-  const split = rows.map(x => {
-    const ls = String(x.v).split("\n");
-    return {x, main:ls.filter(l => !RE_EI_LINE.test(l)).join("\n").trim(),
-            ei:ls.filter(l => RE_EI_LINE.test(l)).map(l => l.replace(RE_EI_LINE, "").trim()).filter(Boolean)};
-  });
-  const anyHere = split.some(o => o.ei.length);
-  const doseIdx = split.findIndex(o => /劑量/.test(o.x.k));
+  const doseIdx = Math.max(0, rows.findIndex(x => /劑量/.test(x.k)));
   // 有 mg/kg 的項目後面插一欄「目前體重換算」，與維持劑量、頻率平行
-  return `<div class="dl">` + split.map((o, i) => {
-    const x = o.x, v = o.main || "—";
-    const xs = obwCalc(v, dw);
-    let hint = "";
-    if (o.ei.length)
-      hint = `<span class="tipi ei" data-tip="${esc("延長輸注（EI）\n" + o.ei.join("\n"))}">EI</span>`;
-    else if (eiAny && !anyHere && i === (doseIdx > -1 ? doseIdx : 0))
-      hint = `<span class="tipi ei off" data-tip="此藥有延長輸注資料，但目前病人條件（如腎功能分段）無對應的 EI 建議，請參考 UpToDate、Micromedex。">EI</span>`;
-    return `<div class="dlk">${esc(x.k)}</div><div class="dlv">${esc(v)}${hint}</div>` +
+  return `<div class="dl">` + rows.map((x, i) => {
+    const xs = obwCalc(x.v, dw);
+    const hint = ei && i === doseIdx ? `<span class="tipi ei${ei.off ? " off" : ""}" data-tip="${esc(ei.tip)}">EI</span>` : "";
+    return `<div class="dlk">${esc(x.k)}</div><div class="dlv">${esc(x.v)}${hint}</div>` +
       (xs.length ? `<div class="dlk">目前體重換算（${esc(dw.tag)} ${esc(r1(dw.w))} kg）</div><div class="dlv wcalc">${esc(xs.join("\n"))}</div>` : "");
   }).join("") + `</div>`;
 }
@@ -1585,7 +1590,7 @@ function conclusion(r, s){
   const main = kidNoPeds
     ? `<div class="cdose">表中無兒科劑量資料，不提供建議劑量</div>`
     : s.base
-    ? doseLines(s.base.rows, doseWeight(r, p), hasEI(r))
+    ? doseLines(s.base.rows, doseWeight(r, p), eiHint(r, s, p))
     : `<div class="cdose">無法判定基礎劑量</div>`;
 
   // 判讀依據：分階段呈現 ① 基本劑量 → ② 特殊族群判定
