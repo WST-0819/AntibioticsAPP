@@ -514,7 +514,21 @@ async function load(manual){
   return _loading;
 }
 
+/* 試算表第一欄為狀態欄（生效否）：只用來篩選，不納入資料。
+   偵測到表頭是狀態欄才剝除，舊快取（沒有狀態欄）照常解析。 */
+const isOn = v => /^(y|yes|v|是|✓|✔|生效)$/i.test(String(v || "").trim());
+function splitStatus(raw){
+  const h = raw[1] || [];
+  if (!/生效|狀態|status/i.test(String(h[0] || ""))) return raw;
+  return raw.map((r, i) => {
+    const rest = (r || []).slice(1);
+    if (i >= 2 && !isOn((r || [])[0])) rest._off = true;
+    return rest;
+  });
+}
+
 function parse(raw){
+  raw = splitStatus(raw);
   const g = raw[0] || [], h = raw[1] || [];
   const width = Math.max(g.length, h.length);
   HEAD = []; for (let i = 0; i < width; i++) HEAD.push((h[i] || "").trim());
@@ -539,7 +553,7 @@ function parse(raw){
   COLG = []; GROUPS.forEach(g2 => g2.cols.forEach(c => COLG[c] = g2));
   Object.keys(_famCache).forEach(k => delete _famCache[k]);
   computeAvail();
-  ROWS = raw.slice(2).filter(r => (r[0] || "").trim() || (r[1] || "").trim());
+  ROWS = raw.slice(2).filter(r => !r._off && ((r[0] || "").trim() || (r[1] || "").trim()));
   buildRoutes();
   if (MODE > GROUPS.length) MODE = 0;
 }
