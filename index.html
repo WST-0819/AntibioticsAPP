@@ -260,7 +260,7 @@
   .drug.pt .dlv{margin-bottom:8px}.drug.pt .dlv:last-child{margin-bottom:0}
   .drug.pt .concl{padding:14px 18px}
   .cobw{margin-top:10px;font-size:12.5px;font-weight:700;padding:8px 10px;border-radius:8px;background:var(--card);color:var(--text);border:1px solid var(--hit-line);line-height:1.5}
-  .wcalc{display:block;margin-top:4px;font-size:14px;font-weight:700;opacity:.85;white-space:pre-line}
+  .dlv.wcalc{opacity:.85}
   .dlv{font-size:17px;font-weight:800;line-height:1.4;color:var(--hit-text);white-space:pre-line;word-break:break-word}
   .concl.amb .dlk,.concl.amb .dlv{color:var(--warn-text)}
   .drug.pt .cbase{margin-top:6px;font-size:11.5px}
@@ -1464,8 +1464,12 @@ function doseTable(rows, cls){
 function doseLines(rows, dw){
   rows = (rows || []).filter(x => !x.none && x.v && x.v !== "—");
   if (!rows.length) return `<div class="cdose">—</div>`;
-  return `<div class="dl">` + rows.map(x =>
-    `<div class="dlk">${esc(x.k)}</div><div class="dlv">${esc(x.v)}${obwCalcHtml(x.v, dw)}</div>`).join("") + `</div>`;
+  // 有 mg/kg 的項目後面插一欄「目前體重換算」，與維持劑量、頻率平行
+  return `<div class="dl">` + rows.map(x => {
+    const xs = obwCalc(x.v, dw);
+    return `<div class="dlk">${esc(x.k)}</div><div class="dlv">${esc(x.v)}</div>` +
+      (xs.length ? `<div class="dlk">目前體重換算（${esc(dw.tag)} ${esc(r1(dw.w))} kg）</div><div class="dlv wcalc">${esc(xs.join("\n"))}</div>` : "");
+  }).join("") + `</div>`;
 }
 
 /* ---------- 肥胖：劑量體重 ----------
