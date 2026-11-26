@@ -950,6 +950,7 @@ function splitSegs(text){
 /* ---------- 片段語意分類 ---------- */
 const RE_NOCHANGE = /[不無毋勿](?:須|需|必|用)(?:要)?(?:再|另)?(?:做)?調整|[不無]需[要]?調整|維持(?:原|常規|一般|標準)?劑量|同(?:一般|常規|正常|標準)|依常規|按一般劑量|no\s+(?:dose\s+)?adjust|no\s+change|not\s+(?:required|necessary|needed)|unchanged|as\s+(?:per\s+)?normal|standard\s+dos/i;
 const RE_DOSE = /\d+(?:\.\d+)?\s*(?:mg|g|gm|mcg|µg|ug|iu|units?|u)\b|q\s*\d+\s*h|q\d+h|\b(?:bid|tid|qid|qd|qod|q\.?d\.?)\b|每\s*\d+\s*(?:小時|天|日)|mg\s*\/\s*kg/i;
+const RE_MAXCLAUSE = /(?:最大劑量|最高劑量|劑量上限|上限|max(?:imum)?(?:\s*(?:daily\s*)?dose)?)\s*[：:]?[^\n；;]*/gi;
 function classify(text){
   if (RE_NOCHANGE.test(text)) return "none";
   if (RE_DOSE.test(text)) return "dose";
@@ -1070,8 +1071,10 @@ function resolveTrait(r, t){
   if (!parts.length) return {kind:null, fs, hasCol:true, missed:missedCols.length > 0};
   const rows = doseRows(parts);
   const text = rowsText(rows);
+  // 「維持原劑量＋最大劑量 2 g Q8H」這類：上限只是封頂，不算另一組劑量建議
+  const noMax = text.replace(RE_MAXCLAUSE, "");
   const kind = !text ? "info"
-    : (RE_NOCHANGE.test(text) && !RE_DOSE.test(text)) ? "none"
+    : (RE_NOCHANGE.test(text) && !RE_DOSE.test(noMax)) ? "none"
     : RE_DOSE.test(text) ? "dose" : "info";
   return {kind, rows, text, line:rowsLine(rows), segs, parts, fs, hasCol:true, missedCols,
           composed: parts.length > 1 || !parts[0].cond};
