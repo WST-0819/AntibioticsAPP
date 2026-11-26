@@ -1360,8 +1360,6 @@ function ptRender(){
   if (man != null) w = `已直接指定 CrCl ${man} mL/min（非肌酸酐值），公式估算值不採用。`;
   else if (c.crclProxy) w = "兒童不套用表內成人腎功能調整；Schwartz eGFR 僅用於判斷是否需提醒查兒科資料。";
   else if (c.egfrProxy) w = "無法計算 eGFR，表中寫 eGFR 的條文改以 CrCl 代用判定。";
-  else if (c.vCrCl != null && c.vEgfr != null && Math.abs(c.vCrCl - c.vEgfr) / Math.max(c.vCrCl, c.vEgfr) > 0.25)
-    w = `CrCl ${r1(c.vCrCl)} 與 eGFR ${r1(c.vEgfr)} 差距逾 25%（一為絕對值、一為每 1.73m² 標準化），請注意該藥文獻是以哪一個分層。`;
   else if (c.wselFallback) w = `無法計算${({ibw:"理想體重 IBW", adj:"調整體重 AdjBW"})[c.wselFallback] || ""}（需要身高，且 Devine 公式限身高 ≥152 cm），CG 已改用實際體重 TBW。`;
   else if (isPeds && c.schw == null) w = "兒童需要身高與 SCr 才能以 Schwartz 估算腎功能。";
   else if (c.ibwNA) w = "身高 <152 cm，Devine 理想體重公式不適用，CG 改以實際體重計算。";
