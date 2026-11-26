@@ -260,7 +260,7 @@
   .drug.pt .dlv{margin-bottom:8px}.drug.pt .dlv:last-child{margin-bottom:0}
   .drug.pt .concl{padding:14px 18px}
   .cobw{margin-top:10px;font-size:12.5px;font-weight:700;padding:8px 10px;border-radius:8px;background:var(--card);color:var(--text);border:1px solid var(--hit-line);line-height:1.5}
-  .wcalc{display:block;margin-top:2px;font-size:14px;font-weight:700;opacity:.85}
+  .wcalc{display:block;margin-top:4px;font-size:14px;font-weight:700;opacity:.85;white-space:pre-line}
   .dlv{font-size:17px;font-weight:800;line-height:1.4;color:var(--hit-text);white-space:pre-line;word-break:break-word}
   .concl.amb .dlk,.concl.amb .dlv{color:var(--warn-text)}
   .drug.pt .cbase{margin-top:6px;font-size:11.5px}
@@ -1509,17 +1509,27 @@ function doseWeight(r, p){
   const peds = p.age != null && p.age < 18;
   return {w:p.wt, tag:"TBW", how:peds ? "兒科，以實際體重" : "非肥胖，以實際體重", formula:"", f:null, plain:true};
 }
-// 把 "15 mg/kg/dose"、"10-20 mg/kg q12h" 換算成實際劑量
+// 把 "15 mg/kg/dose"、"10-20 mg/kg q12h" 換算成實際劑量；回傳 "標籤：換算值"
+// 標籤：同一行冒號前的文字（如 HSV：）、或劑量後的括號說明（如 (severe infection)）；都沒有就用原 mg/kg 寫法
 function obwCalc(v, dw){
   if (!dw || dw.na || !v) return [];
   const out = [], seen = new Set();
   const re = /(\d+(?:\.\d+)?)(?:\s*[-–~～]\s*(\d+(?:\.\d+)?))?\s*(mg|mcg|µg|ug|g|units?|u|iu)\s*\/\s*kg(\s*\/\s*(?:dose|day|d|hr|h|min))?/gi;
+  const okLab = t => t && t.length <= 40 && !/\d\s*(?:mg|mcg|g|units?|iu)\b/i.test(t);
   let m;
   while ((m = re.exec(v))){
     const a = parseFloat(m[1]), b = m[2] ? parseFloat(m[2]) : null;
     const fmt = n => { const x = n * dw.w; return (x >= 100 ? Math.round(x) : Math.round(x * 10) / 10).toLocaleString("en-US"); };
     const per = m[4] ? m[4].replace(/\s+/g, "") : "";
-    const s = `${m[0].trim()} → ${fmt(a)}${b != null ? "–" + fmt(b) : ""} ${m[3]}${per}`;
+    let lab = "";
+    const after = v.slice(m.index + m[0].length).match(/^\s*[(（]([^()（）\n]{1,40})[)）]/);
+    if (after && okLab(after[1].trim()) && !/^(?:max|上限|over|iv|po)/i.test(after[1].trim())) lab = after[1].trim();
+    if (!lab){
+      const pre = v.slice(0, m.index).split(/[\n；;]/).pop();
+      const pm = pre.match(/^\s*(.+?)\s*[：:]\s*$/);
+      if (pm && okLab(pm[1])) lab = pm[1];
+    }
+    const s = `${lab || m[0].trim()}：${fmt(a)}${b != null ? "–" + fmt(b) : ""} ${m[3]}${per}`;
     if (!seen.has(s)){ seen.add(s); out.push(s); }
   }
   return out;
@@ -1527,7 +1537,7 @@ function obwCalc(v, dw){
 function obwCalcHtml(v, dw){
   const xs = obwCalc(v, dw);
   if (!xs.length) return "";
-  return `<span class="wcalc">${esc(xs.join("；"))}（${esc(dw.tag)} ${esc(r1(dw.w))} kg）</span>`;
+  return `<span class="wcalc">目前體重換算：${esc(dw.tag)} ${esc(r1(dw.w))} kg\n${esc(xs.join("\n"))}</span>`;
 }
 const PT_OPEN = new Set();
 function ptToggle(btn){
@@ -1582,7 +1592,7 @@ function conclusion(r, s){
   s.modifiers.forEach(m => {
     const msrcs = [...new Set((m.segs || []).map(x => x.src).filter(Boolean))];
     let mv = (m.line || m.text);
-    if (m.trait.key === "obese"){ const xs = obwCalc(mv, obeseDoseWeight(r, p)); if (xs.length) mv += "\n" + xs.join("；"); }
+    if (m.trait.key === "obese"){ const xs = obwCalc(mv, obeseDoseWeight(r, p)); if (xs.length) mv += "\n目前體重換算：" + obeseDoseWeight(r, p).tag + " " + r1(obeseDoseWeight(r, p).w) + " kg\n" + xs.join("\n"); }
     st2.push({t:m.trait.label, use:true, v:mv, src:msrcs.join("／")});
   });
   if (s.pedsRenal) st2.push({t:s.pedsRenal.dial ? "腎臟替代治療" : "腎功能", use:false, note:"表內為成人資料，兒童不適用"});
