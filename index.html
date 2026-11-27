@@ -158,6 +158,10 @@
   .seg.dim{color:var(--muted)}
   .f.wide{grid-column:span 2}
   .f.full{grid-column:1/-1}
+  /* 劑量表＋右側（肝功能、資料來源）：空間夠就並排，劑量太寬時右側自動換到下方 */
+  .bwrap{display:flex;flex-wrap:wrap;gap:12px 40px;align-items:flex-start;padding:8px 16px 14px}
+  .bwrap .bmain{flex:0 1 auto;min-width:0;max-width:100%}
+  .bwrap .bside{flex:1 1 180px;display:flex;flex-direction:column;gap:10px;padding-top:2px}
   .btab{border-collapse:collapse;width:auto;min-width:0;max-width:100%;margin:2px 0 0;background:transparent}
   .btab th{position:static;background:transparent;text-align:left;font-size:11px;font-weight:500;color:var(--muted);
     letter-spacing:.04em;padding:2px 28px 4px 0;border-bottom:1px solid var(--line)}
@@ -1977,7 +1981,7 @@ function basicTable(r, on, acts){
     if (!(f || "").trim()){ const sp = splitFreq(x.seg); d = sp.d; f = sp.f; }
     body += tr(x.seg, {[main]:d, ...(fq != null ? {[fq]:f} : {})});
   });
-  const html = `<div class="f full"><div class="k">劑量</div>` +
+  const html = `<div class="f bmain"><div class="k">劑量</div>` +
     `<table class="btab"><thead><tr>${cols.map(c => `<th>${esc(HEAD[c])}</th>`).join("")}</tr></thead><tbody>${body}</tbody></table></div>`;
   return {html, used};
 }
@@ -1985,7 +1989,6 @@ function cards(rows, terms){
   const on = ptReady(), acts = activeTraits();
   return rows.map(r => {
     const fs = [], bt0 = basicTable(r, on, acts);
-    if (bt0) fs.push(bt0.html);
     for (let c = 3; c < BASIC_COLS; c++){
       if (!HEAD[c]) continue;
       if (bt0 && bt0.used.has(c)) continue;           // 已整合進上方的劑量表
@@ -2007,7 +2010,8 @@ function cards(rows, terms){
     return `<div class="drug"><div class="dhead">
       <div class="dn" style="font-size:16px">${hl(r[0], terms)}${r[2] ? `<span class="rt">${esc(r[2])}</span>` : ""}</div>
       <div class="di">${hl(r[1], terms)}</div>${extraBtns(r, "*")}</div>
-      <div class="fields">${fs.join("")}</div></div>`;
+      ${bt0 ? `<div class="bwrap">${bt0.html}<div class="bside">${fs.join("")}</div></div>`
+            : `<div class="fields">${fs.join("")}</div>`}</div>`;
   }).join("");
 }
 
