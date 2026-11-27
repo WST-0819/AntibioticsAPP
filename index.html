@@ -1168,7 +1168,13 @@ function resolveTrait(r, t){
     if (val) parts.push({head:f.head, val, src:f.src, cond:f.anyParsed});
   });
   if (!parts.length) return {kind:null, fs, hasCol:true, missed:missedCols.length > 0};
-  const rows = doseRows(parts);
+  let rows = doseRows(parts);
+  // 腎功能：頻率寫在同一格（沒有獨立頻率欄）時，拆成「建議劑量／頻率」兩欄輸出
+  if (t.key === "renal" && !rows.some(x => x.k === "頻率")){
+    const i = rows.findIndex(x => x.k === "建議劑量");
+    if (i > -1){ const sp = splitFreq(rows[i].v);
+      if (sp.f.trim() && sp.d.trim()) rows = [...rows.slice(0, i), {...rows[i], v:sp.d}, {k:"頻率", v:sp.f, src:rows[i].src}, ...rows.slice(i + 1)]; }
+  }
   const text = rowsText(rows);
   // 「維持原劑量＋最大劑量 2 g Q8H」這類：上限只是封頂，不算另一組劑量建議
   const noMax = text.replace(RE_MAXCLAUSE, "");
@@ -1882,6 +1888,19 @@ function table(rows, g, terms){
 /* 基本資料卡：一般劑量與腎功能調整整合成一張表
    欄＝速效劑量／維持劑量／頻率（同試算表），列＝一般、各段腎功能條件；
    腎功能頻率欄依換行逐行對齊，不必重複寫頻率。頻率欄自帶條件時不整合，照舊分欄顯示。 */
+/* 從劑量文字的每一行尾端拆出頻率（Q12H、QD、Q6H - Q8H、BID…），逐行對齊 */
+const FQ1 = "(?:q\\s*\\d+(?:\\s*[-–~]\\s*\\d+)?\\s*h(?:rs?)?|qd|qod|qid|tid|bid|qw|q\\s*\\d+\\s*(?:d|days?)|once\\s+daily|daily|每\\s*\\d+\\s*(?:小時|天|日))";
+const RE_FQTAIL = new RegExp("\\s*(" + FQ1 + "(?:\\s*[-–~]\\s*" + FQ1 + ")?)\\s*$", "i");
+function splitFreq(text){
+  const d = [], f = [];
+  String(text || "").split("\n").forEach(l => {
+    const m = l.match(RE_FQTAIL);
+    if (m && l.slice(0, m.index).trim() && !/[：:]\s*$/.test(l.slice(0, m.index))){ d.push(l.slice(0, m.index).trim()); f.push(m[1].trim()); }
+    else { d.push(l); f.push(""); }
+  });
+  while (f.length && !f[f.length - 1]) f.pop();
+  return {d:d.join("\n"), f:f.join("\n")};
+}
 function splitCond(seg){
   const d = doseOf(seg);
   if (d === seg || !seg.endsWith(d)) return {c:"", d:seg};
@@ -1910,10 +1929,12 @@ function basicTable(r, on, acts){
     const drop = x.seg.split("\n").length - d.split("\n").length;   // 條件獨立成行時，頻率也去掉那幾行
     if (drop > 0) f = f.slice(drop);
     f = f.join("\n").replace(/\n+$/, "");
+    let dd = d;
+    if (!f.trim()){ const sp = splitFreq(d); dd = sp.d; f = sp.f; }   // 沒有頻率欄 → 從文字拆
     const m = matchSeg(x.seg);
     const cls = renalOn ? (m.match ? "hit" : (m.parsed ? "dim" : "")) : "";
     body += `<tr${cls ? ` class="${cls}"` : ""}>${td((cls === "hit" ? "✓ " : "") + (c || HEAD[rc]), "cnd")}` +
-      cols.map(k => td(k === main ? d : k === fq ? f : "")).join("") + `</tr>`;
+      cols.map(k => td(k === main ? dd : k === fq ? f : "")).join("") + `</tr>`;
   });
   const html = `<div class="f full"><div class="k">劑量（一般／${esc(HEAD[rc])}）</div>` +
     `<table class="btab"><thead><tr><th>條件</th>${cols.map(c => `<th>${esc(HEAD[c])}</th>`).join("")}</tr></thead><tbody>${body}</tbody></table></div>`;
