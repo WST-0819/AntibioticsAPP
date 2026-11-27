@@ -156,24 +156,18 @@
     padding:4px 8px;border-radius:0 6px 6px 0;font-weight:600;border-top:0}
   .seg.hit .tick{font-weight:800;margin-right:4px}
   .seg.dim{color:var(--muted)}
-  .f.wide{grid-column:span 2}
-  .f.full{grid-column:1/-1}
-  /* 劑量表＋右側（肝功能、資料來源）：空間夠就並排，劑量太寬時右側自動換到下方 */
-  .bwrap{display:flex;flex-wrap:wrap;gap:12px 40px;align-items:flex-start;padding:8px 16px 14px}
-  .bwrap .bmain{flex:0 1 auto;min-width:0;max-width:100%}
-  .bwrap .bside{flex:1 1 180px;display:flex;flex-direction:column;gap:10px;padding-top:2px}
-  .btab{border-collapse:collapse;width:auto;min-width:0;max-width:100%;margin:2px 0 0;background:transparent}
-  .btab th{position:static;background:transparent;text-align:left;font-size:11px;font-weight:500;color:var(--muted);
-    letter-spacing:.04em;padding:2px 28px 4px 0;border-bottom:1px solid var(--line)}
-  .btab td{font-size:13.5px;padding:5px 28px 5px 0;vertical-align:top;white-space:pre-wrap;border-bottom:1px dashed var(--line)}
-  .btab tbody tr:last-child td{border-bottom:0}
-  .btab th:last-child,.btab td:last-child{padding-right:8px}
-  .btab td.cnd{white-space:nowrap;color:var(--muted)}
-  .btab tr.gen td.cnd{color:inherit;font-weight:600}
-  .btab tr.hit td{background:var(--hit);color:var(--hit-text);font-weight:600}
-  .btab tr.hit td:first-child{border-left:3px solid var(--hit-line);padding-left:8px}
-  .btab td:first-child{padding-left:0}
-  .btab tr.dim td{color:var(--muted)}
+  /* 基本資料總表：一藥一 tbody，子列以虛線分隔，斑馬紋以藥品為單位 */
+  .btbl tbody tr{background:transparent}
+  .btbl tbody:nth-of-type(even){background:var(--zebra)}
+  .btbl tr.bsub td.bd{border-bottom:1px dashed var(--line)}
+  .btbl td.bd{padding-top:3px;padding-bottom:3px}
+  .btbl td.bd.in{border-bottom:0}
+  .btbl td.bd.nw,.btbl td.bd.nw .v{white-space:nowrap}
+  .btbl tbody tr:first-child td.bd{padding-top:9px}
+  .btbl tbody tr:last-child td.bd{padding-bottom:9px}
+  .btbl td.bd.hit{background:var(--hit);color:var(--hit-text);font-weight:600}
+  .btbl td.bd.dim{color:var(--muted)}
+  .btbl td.bd .tick{font-weight:800;margin-right:4px}
   .segp{display:grid;grid-template-columns:minmax(0,1fr) auto}
   .segp .seg{padding-right:10px}
   .segp .seg.fq{padding-left:10px;padding-right:8px;white-space:pre-wrap}
@@ -1939,80 +1933,81 @@ function splitCond(seg){
   if (d === seg || !seg.endsWith(d)) return {c:"", d:seg};
   return {c:seg.slice(0, seg.length - d.length).replace(/[：:\s]+$/, "").trim(), d};
 }
-function basicTable(r, on, acts){
+/* 基本資料（成人）總表：比照特殊族群表格，一列一藥。
+   維持劑量每一段（含寫在欄內的 CrCl 條件、尚未整合的腎功能調整條文）拆成子列，
+   速效劑量／頻率依換行逐段對齊；藥名、肝功能、資料來源等跨子列合併。 */
+function basicLayout(){
   let rc = -1;
   for (let c = 3; c < BASIC_COLS; c++) if (PAIR[c] == null && colFam(c) === "renal"){ rc = c; break; }
   const end = rc >= 0 ? rc : BASIC_COLS;
   const fcK = rc >= 0 ? Object.keys(PAIR).find(k => PAIR[k] === rc) : null, fc = fcK != null ? +fcK : -1;
-  if (fc >= 0 && cell(r[fc]) && !pairedFreq(r, fc)) return null;
   const gen = [];
   for (let c = 3; c < end; c++) if (HEAD[c] && !isSrcCol(c) && !colFam(c)) gen.push(c);
   const fq = gen.find(c => RE_FREQ.test(HEAD[c]));
   const main = [...gen].reverse().find(c => c !== fq && !RE_LOAD.test(HEAD[c])) ?? gen[0];
-  if (main == null) return null;
-  const cols = gen.filter(c => c === main || c === fq || cell(r[c]));   // 空的速效劑量欄不顯示
-  const used = new Set(gen); if (rc >= 0) used.add(rc); if (fc >= 0) used.add(fc);
-  const renalOn = on && acts.some(t => t.key === "renal");
-  const td = v => `<td>${esc(v || "")}</td>`;
-  const tr = (seg, vals) => {
-    const m = matchSeg(seg), cls = renalOn ? (m.match ? "hit" : (m.parsed ? "dim" : "")) : "";
-    return `<tr${cls ? ` class="${cls}"` : ""}>` + cols.map(k => td(vals[k])).join("") + `</tr>`;
-  };
-  let body = "";
-  // 一般劑量欄：每段（含寫在劑量欄裡的 CrCl 條件）一列，頻率依換行對齊
-  const mv = cell(r[main]);
-  if (mv){
-    // 速效劑量、頻率等欄依換行與維持劑量逐段對齊；該欄自己寫了條件就整格放第一列
-    const others = cols.filter(k => k !== main).map(k => {
-      const own = freqOwnCond(cell(r[k]));
-      return {k, own, al: own ? null : alignFreq(r[main], r[k])};
-    });
-    alignFreq(r[main], "").forEach((x, i) => {
-      const vals = {[main]:x.seg};
-      others.forEach(o => { vals[o.k] = o.own ? (i ? "" : cell(r[o.k])) : o.al[i].disp; });
-      body += tr(x.seg, vals);
-    });
-  } else {
-    const vals = {}; cols.forEach(k => vals[k] = cell(r[k]) || "—"); body += tr("", vals);
-  }
-  // 尚未整合的「腎功能調整」欄：接在下面，條文整段放劑量欄，頻率取搭配欄或從行尾拆出
-  if (rc >= 0 && cell(r[rc])) alignFreq(r[rc], fc >= 0 ? r[fc] : "").forEach(x => {
-    let d = x.seg, f = x.disp;
-    if (!(f || "").trim()){ const sp = splitFreq(x.seg); d = sp.d; f = sp.f; }
-    body += tr(x.seg, {[main]:d, ...(fq != null ? {[fq]:f} : {})});
+  const rest = [];
+  for (let c = 3; c < BASIC_COLS; c++) if (HEAD[c] && !gen.includes(c) && c !== rc && c !== fc) rest.push(c);
+  return {rc, fc, gen, fq, main, rest};
+}
+function basicSubrows(r, L){
+  const {rc, fc, gen, fq, main} = L, out = [];
+  const others = gen.filter(k => k !== main).map(k => {
+    const own = freqOwnCond(cell(r[k]));
+    return {k, own, al: own ? null : alignFreq(r[main], r[k])};
   });
-  const html = `<div class="f bmain"><div class="k">劑量</div>` +
-    `<table class="btab"><thead><tr>${cols.map(c => `<th>${esc(HEAD[c])}</th>`).join("")}</tr></thead><tbody>${body}</tbody></table></div>`;
-  return {html, used};
+  if (cell(r[main])) alignFreq(r[main], "").forEach((x, i) => {
+    const vals = {[main]:x.seg};
+    others.forEach(o => { vals[o.k] = o.own ? (i ? "" : cell(r[o.k])) : o.al[i].disp; });
+    out.push({seg:x.seg, vals});
+  });
+  else { const vals = {}; gen.forEach(k => vals[k] = cell(r[k])); out.push({seg:"", vals}); }
+  // 尚未整合的「腎功能調整」欄：接在後面，條文放維持劑量欄，頻率取搭配欄或從行尾拆出
+  if (rc >= 0 && cell(r[rc])){
+    const fcOwn = fc >= 0 && freqOwnCond(cell(r[fc]));
+    alignFreq(r[rc], fc >= 0 && !fcOwn ? r[fc] : "").forEach((x, i) => {
+      let d = x.seg, f = x.disp;
+      if (fcOwn) f = i ? "" : cell(r[fc]);
+      else if (!(f || "").trim()){ const sp = splitFreq(x.seg); d = sp.d; f = sp.f; }
+      out.push({seg:x.seg, vals:{[main]:d, ...(fq != null ? {[fq]:f} : {})}});
+    });
+  }
+  return out;
 }
 function cards(rows, terms){
-  const on = ptReady(), acts = activeTraits();
-  return rows.map(r => {
-    const fs = [], bt0 = basicTable(r, on, acts);
-    for (let c = 3; c < BASIC_COLS; c++){
-      if (!HEAD[c]) continue;
-      if (bt0 && bt0.used.has(c)) continue;           // 已整合進上方的劑量表
-      if (pairedFreq(r, c)) continue;                 // 已併入左邊的腎功能調整欄
-      const fc = Object.keys(PAIR).find(k => PAIR[k] === c);
-      if (fc != null && pairedFreq(r, +fc)){
-        const act = on && colTraits(c).some(t => acts.includes(t));
-        const inner = act ? segPairCell(r[c], r[fc])
-          : `<div class="segp">` + alignFreq(r[c], r[fc]).map(x => `<div class="seg">${esc(x.seg)}</div><div class="seg fq">${esc(x.disp)}</div>`).join("") + `</div>`;
-        fs.push(`<div class="f wide"><div class="k">${esc(HEAD[c])}｜頻率</div>${inner}</div>`);
-        continue;
+  const L = basicLayout();
+  if (L.main == null) return "";
+  const on = ptReady(), renalOn = on && activeTraits().some(t => t.key === "renal");
+  const th = [...L.gen, ...L.rest].map(c => `<th>${esc(HEAD[c])}</th>`).join("");
+  const body = rows.map(r => {
+    // 段內每一行再拆成一列，換行時各欄仍逐行對齊；段與段之間才畫虛線
+    const subs = [];
+    basicSubrows(r, L).forEach(x => {
+      const ls = {}; let k = 1;
+      L.gen.forEach(c => { ls[c] = String(x.vals[c] || "").split("\n"); k = Math.max(k, ls[c].length); });
+      for (let j = 0; j < k; j++){
+        const vals = {}; L.gen.forEach(c => vals[c] = (ls[c][j] || "").trim());
+        subs.push({seg:x.seg, vals, first:j === 0, last:j === k - 1});
       }
-      const val = (r[c] || "").trim();
-      const bt = extraBtns(r, HEAD[c]);
-      const act = on && colTraits(c).some(t => acts.includes(t));
-      const inner = !val ? (bt ? "" : `<div class="v na">—</div>`) : act ? segCell(val) : `<div class="v">${esc(val)}</div>`;
-      fs.push(`<div class="f"><div class="k">${esc(HEAD[c])}</div>${inner}${bt}</div>`);
-    }
-    return `<div class="drug"><div class="dhead">
-      <div class="dn" style="font-size:16px">${hl(r[0], terms)}${r[2] ? `<span class="rt">${esc(r[2])}</span>` : ""}</div>
-      <div class="di">${hl(r[1], terms)}</div>${extraBtns(r, "*")}</div>
-      ${bt0 ? `<div class="bwrap">${bt0.html}<div class="bside">${fs.join("")}</div></div>`
-            : `<div class="fields">${fs.join("")}</div>`}</div>`;
+    });
+    const n = subs.length;
+    const rs = n > 1 ? ` rowspan="${n}"` : "";
+    return `<tbody>` + subs.map((x, i) => {
+      const m = x.seg ? matchSeg(x.seg) : {match:false, parsed:false};
+      const cls = renalOn ? (m.match ? "hit" : (m.parsed ? "dim" : "")) : "";
+      let h = i === 0 ? drugCell(r, terms).replace('<td class="drugcell"', `<td class="drugcell"${rs}`) : "";
+      h += L.gen.map(c => {
+        const v = x.vals[c] || "", bt = i === 0 ? extraBtns(r, HEAD[c] || "") : "";
+        const tick = cls === "hit" && c === L.main && x.first ? '<span class="tick">✓</span>' : "";
+        return `<td class="bd${cls ? " " + cls : ""}${c !== L.main ? " nw" : ""}${x.last ? "" : " in"}">${v ? `<div class="v">${tick}${esc(v)}</div>` : (i === 0 && !bt ? '<span class="na">—</span>' : "")}${bt}</td>`;
+      }).join("");
+      if (i === 0) h += L.rest.map(c => {
+        const v = cell(r[c]), bt = extraBtns(r, HEAD[c] || "");
+        return `<td${rs}>${v ? `<div class="v">${esc(v)}</div>` : (bt ? "" : '<span class="na">—</span>')}${bt}</td>`;
+      }).join("");
+      return `<tr${i < n - 1 && x.last ? ' class="bsub"' : ""}>${h}</tr>`;
+    }).join("") + `</tbody>`;
   }).join("");
+  return `<div class="tblwrap"><table class="btbl"><thead><tr><th>藥品 / 成分</th>${th}</tr></thead>${body}</table></div>`;
 }
 
 /* i 說明浮窗：滑過顯示，點一下固定 */
