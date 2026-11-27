@@ -166,7 +166,8 @@
   .btab td.cnd{white-space:nowrap;color:var(--muted)}
   .btab tr.gen td.cnd{color:inherit;font-weight:600}
   .btab tr.hit td{background:var(--hit);color:var(--hit-text);font-weight:600}
-  .btab tr.hit td.cnd{border-left:3px solid var(--hit-line);padding-left:8px}
+  .btab tr.hit td:first-child{border-left:3px solid var(--hit-line);padding-left:8px}
+  .btab td:first-child{padding-left:0}
   .btab tr.dim td{color:var(--muted)}
   .segp{display:grid;grid-template-columns:minmax(0,1fr) auto}
   .segp .seg{padding-right:10px}
@@ -1109,6 +1110,19 @@ function baseDoseCols(r){
     const v = cell(r[c]); if (!v) continue;
     out.push({col:c, head:HEAD[c], val:v, src:srcFor(c, r)});
   }
+  // 一般劑量欄裡直接寫了 CrCl 條件（已整合腎功能調整）→ 只取比中的段落，頻率依換行對齊取同一段
+  const mc = [...out].reverse().find(x => !RE_FREQ.test(x.head) && !RE_LOAD.test(x.head));
+  const fx = out.find(x => RE_FREQ.test(x.head));
+  if (mc){
+    const al = alignFreq(r[mc.col], fx && !freqOwnCond(fx.val) ? r[fx.col] : "").map(x => ({...x, m:matchSeg(x.seg)}));
+    const sel = al.filter(x => x.m.match);
+    if (sel.length){
+      const use = al.filter(x => x.m.match || !x.m.parsed);
+      mc.val = use.map(x => doseOf(x.seg)).join("\n");
+      if (fx && !freqOwnCond(fx.val)){ fx.val = use.map(x => x.freq).filter(Boolean).join("\n"); if (!fx.val) out.splice(out.indexOf(fx), 1); }
+      out.condSel = sel.map(x => ({seg:x.seg, src:mc.src, head:mc.head}));
+    }
+  }
   return out;
 }
 
@@ -1226,6 +1240,16 @@ function synth(r){
     res.baseVia = baseT ? (baseT.label + " 未比中可用條文 → 暫採一般成人劑量，請自行確認")
                         : "一般成人劑量（無適用的族群條件）";
     res.baseNeedsCheck = !!baseT;
+  }
+
+  // 一般劑量欄內的 CrCl 條件已比中 → 視為腎功能判定結果
+  if (bd.condSel && res.base && res.base.fromGeneral){
+    const rt = acts.find(t => t.key === "renal");
+    if (rt){
+      res.baseTrait = rt; res.baseNeedsCheck = false; res.base.segs = bd.condSel;
+      res.baseVia = rt.label + " " + rt.note(p) + " → " + bd.condSel[0].head + "欄內條件";
+      res.missing = res.missing.filter(m => m.trait !== rt);
+    }
   }
 
   // 兒童：表內腎功能調整為成人資料，不採用；依成人門檻判斷是否需要提醒
@@ -1909,35 +1933,44 @@ function splitCond(seg){
 function basicTable(r, on, acts){
   let rc = -1;
   for (let c = 3; c < BASIC_COLS; c++) if (PAIR[c] == null && colFam(c) === "renal"){ rc = c; break; }
-  if (rc < 0) return null;
-  const fcK = Object.keys(PAIR).find(k => PAIR[k] === rc), fc = fcK != null ? +fcK : -1;
+  const end = rc >= 0 ? rc : BASIC_COLS;
+  const fcK = rc >= 0 ? Object.keys(PAIR).find(k => PAIR[k] === rc) : null, fc = fcK != null ? +fcK : -1;
   if (fc >= 0 && cell(r[fc]) && !pairedFreq(r, fc)) return null;
   const gen = [];
-  for (let c = 3; c < rc; c++) if (HEAD[c] && !isSrcCol(c) && !colFam(c)) gen.push(c);
+  for (let c = 3; c < end; c++) if (HEAD[c] && !isSrcCol(c) && !colFam(c)) gen.push(c);
   const fq = gen.find(c => RE_FREQ.test(HEAD[c]));
   const main = [...gen].reverse().find(c => c !== fq && !RE_LOAD.test(HEAD[c])) ?? gen[0];
   if (main == null) return null;
   const cols = gen.filter(c => c === main || c === fq || cell(r[c]));   // 空的速效劑量欄不顯示
-  const used = new Set([...gen, rc]); if (fc >= 0) used.add(fc);
+  const used = new Set(gen); if (rc >= 0) used.add(rc); if (fc >= 0) used.add(fc);
   const renalOn = on && acts.some(t => t.key === "renal");
-  const td = (v, cls) => `<td${cls ? ` class="${cls}"` : ""}>${esc(v || "")}</td>`;
-  let body = `<tr class="gen">${td("一般", "cnd")}${cols.map(c => td(cell(r[c]) || "—")).join("")}</tr>`;
-  const rv = cell(r[rc]);
-  if (rv) alignFreq(r[rc], fc >= 0 ? r[fc] : "").forEach(x => {
-    const {c, d} = splitCond(x.seg);
-    let f = (x.disp || "").split("\n");
-    const drop = x.seg.split("\n").length - d.split("\n").length;   // 條件獨立成行時，頻率也去掉那幾行
-    if (drop > 0) f = f.slice(drop);
-    f = f.join("\n").replace(/\n+$/, "");
-    let dd = d;
-    if (!f.trim()){ const sp = splitFreq(d); dd = sp.d; f = sp.f; }   // 沒有頻率欄 → 從文字拆
-    const m = matchSeg(x.seg);
-    const cls = renalOn ? (m.match ? "hit" : (m.parsed ? "dim" : "")) : "";
-    body += `<tr${cls ? ` class="${cls}"` : ""}>${td((cls === "hit" ? "✓ " : "") + (c || HEAD[rc]), "cnd")}` +
-      cols.map(k => td(k === main ? dd : k === fq ? f : "")).join("") + `</tr>`;
+  const td = v => `<td>${esc(v || "")}</td>`;
+  const tr = (seg, vals) => {
+    const m = matchSeg(seg), cls = renalOn ? (m.match ? "hit" : (m.parsed ? "dim" : "")) : "";
+    return `<tr${cls ? ` class="${cls}"` : ""}>` + cols.map(k => td(vals[k])).join("") + `</tr>`;
+  };
+  let body = "";
+  // 一般劑量欄：每段（含寫在劑量欄裡的 CrCl 條件）一列，頻率依換行對齊
+  const fqRaw = fq != null ? r[fq] : "", fqOwn = fq != null && freqOwnCond(cell(fqRaw));
+  const mv = cell(r[main]);
+  if (mv){
+    alignFreq(r[main], fqOwn ? "" : fqRaw).forEach((x, i) => {
+      const vals = {[main]:x.seg};
+      if (fq != null) vals[fq] = fqOwn ? (i ? "" : cell(fqRaw)) : x.disp;
+      if (i === 0) cols.forEach(k => { if (k !== main && k !== fq) vals[k] = cell(r[k]); });
+      body += tr(x.seg, vals);
+    });
+  } else {
+    const vals = {}; cols.forEach(k => vals[k] = cell(r[k]) || "—"); body += tr("", vals);
+  }
+  // 尚未整合的「腎功能調整」欄：接在下面，條文整段放劑量欄，頻率取搭配欄或從行尾拆出
+  if (rc >= 0 && cell(r[rc])) alignFreq(r[rc], fc >= 0 ? r[fc] : "").forEach(x => {
+    let d = x.seg, f = x.disp;
+    if (!(f || "").trim()){ const sp = splitFreq(x.seg); d = sp.d; f = sp.f; }
+    body += tr(x.seg, {[main]:d, ...(fq != null ? {[fq]:f} : {})});
   });
-  const html = `<div class="f full"><div class="k">劑量（一般／${esc(HEAD[rc])}）</div>` +
-    `<table class="btab"><thead><tr><th>條件</th>${cols.map(c => `<th>${esc(HEAD[c])}</th>`).join("")}</tr></thead><tbody>${body}</tbody></table></div>`;
+  const html = `<div class="f full"><div class="k">劑量</div>` +
+    `<table class="btab"><thead><tr>${cols.map(c => `<th>${esc(HEAD[c])}</th>`).join("")}</tr></thead><tbody>${body}</tbody></table></div>`;
   return {html, used};
 }
 function cards(rows, terms){
