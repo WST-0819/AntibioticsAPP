@@ -1120,7 +1120,11 @@ function baseDoseCols(r){
     if (sel.length){
       const use = al.filter(x => x.m.match || !x.m.parsed);
       mc.val = use.map(x => doseOf(x.seg)).join("\n");
-      if (fx && !freqOwnCond(fx.val)){ fx.val = use.map(x => x.freq).filter(Boolean).join("\n"); if (!fx.val) out.splice(out.indexOf(fx), 1); }
+      out.filter(x => x !== mc && !freqOwnCond(x.val)).forEach(x => {
+        const ax = alignFreq(r[mc.col], r[x.col]);
+        x.val = al.map((y, i) => use.includes(y) ? ax[i].freq : "").filter(Boolean).join("\n");
+      });
+      for (let i = out.length - 1; i >= 0; i--) if (!out[i].val) out.splice(i, 1);
       out.condSel = sel.map(x => ({seg:x.seg, src:mc.src, head:mc.head}));
     }
   }
@@ -1952,13 +1956,16 @@ function basicTable(r, on, acts){
   };
   let body = "";
   // 一般劑量欄：每段（含寫在劑量欄裡的 CrCl 條件）一列，頻率依換行對齊
-  const fqRaw = fq != null ? r[fq] : "", fqOwn = fq != null && freqOwnCond(cell(fqRaw));
   const mv = cell(r[main]);
   if (mv){
-    alignFreq(r[main], fqOwn ? "" : fqRaw).forEach((x, i) => {
+    // 速效劑量、頻率等欄依換行與維持劑量逐段對齊；該欄自己寫了條件就整格放第一列
+    const others = cols.filter(k => k !== main).map(k => {
+      const own = freqOwnCond(cell(r[k]));
+      return {k, own, al: own ? null : alignFreq(r[main], r[k])};
+    });
+    alignFreq(r[main], "").forEach((x, i) => {
       const vals = {[main]:x.seg};
-      if (fq != null) vals[fq] = fqOwn ? (i ? "" : cell(fqRaw)) : x.disp;
-      if (i === 0) cols.forEach(k => { if (k !== main && k !== fq) vals[k] = cell(r[k]); });
+      others.forEach(o => { vals[o.k] = o.own ? (i ? "" : cell(r[o.k])) : o.al[i].disp; });
       body += tr(x.seg, vals);
     });
   } else {
