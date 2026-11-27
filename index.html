@@ -156,6 +156,14 @@
     padding:4px 8px;border-radius:0 6px 6px 0;font-weight:600;border-top:0}
   .seg.hit .tick{font-weight:800;margin-right:4px}
   .seg.dim{color:var(--muted)}
+  .f.wide{grid-column:span 2}
+  .segp{display:grid;grid-template-columns:minmax(0,1fr) auto}
+  .segp .seg{padding-right:10px}
+  .segp .seg.fq{padding-left:10px;padding-right:8px;white-space:pre-wrap}
+  .segp .seg.hit{border-radius:0}
+  .segp .seg.hit.fq{border-left:0;border-radius:0 6px 6px 0}
+  .segp .seg:nth-child(-n+2){border-top:0}
+  .segp .seg:nth-child(n+3){border-top:1px dashed var(--line)}
   .seg.hit.uncond{background:transparent;border-left-color:var(--line);color:inherit;font-weight:500}
   .seg.hit.uncond .tick{color:var(--muted)}
 
@@ -463,6 +471,7 @@ const GID = "1596306221"; // 成人
 let BASIC_COLS = 9;       // 基本區欄數（藥名…資料來源），parse() 依分類標題自動判定
 
 let HEAD = [], ROWS = [], GROUPS = [], COLG = [], MODE = 0;
+let PAIR = {};   // 頻率欄 → 它所搭配的腎功能調整欄（同列換行對齊）
 let ROUTES = [], ROUTE_SEL = [];   // 給藥途徑清單／目前勾選（空 = 全部） // -1 = 個人化建議，0 = 基本資訊，1.. = GROUPS[i-1]
 
 /* ---------- 讀取試算表（JSONP，免 CORS） ---------- */
@@ -536,9 +545,12 @@ function parse(raw){
   { let b = -1; for (let i = 4; i < width; i++) if ((g[i] || "").trim()){ b = i; break; }
     BASIC_COLS = b > 0 ? b : 9; }
   // 緊接在「腎功能調整」後面的「頻率」欄屬於腎功能調整，改名以便歸類與顯示
+  PAIR = {};
   for (let i = 1; i < BASIC_COLS; i++)
-    if (/^(?:頻率|頻次|frequency)$/i.test(HEAD[i]) && /腎功能|renal|crcl|egfr/i.test(HEAD[i-1]) && !/頻率/.test(HEAD[i-1]))
+    if (/^(?:頻率|頻次|frequency)$/i.test(HEAD[i]) && /腎功能|renal|crcl|egfr/i.test(HEAD[i-1]) && !/頻率/.test(HEAD[i-1])){
       HEAD[i] = HEAD[i-1].replace(/頻率$/, "") + "頻率";
+      PAIR[i] = i - 1;
+    }
   GROUPS = []; let cur = null;
   for (let i = BASIC_COLS; i < width; i++){
     const label = (g[i] || "").trim();
@@ -995,6 +1007,13 @@ function classify(text){
 }
 // 去掉條件前綴，只留劑量本文
 function doseOf(seg){
+  // 第一行只有條件（如「CrCl 20 - 40」單獨一行）→ 去掉該行，其餘整段都是劑量
+  const ls = String(seg).split("\n");
+  if (ls.length > 1){
+    const f0 = ls[0].trim().replace(/[：:]\s*$/, "");
+    if ((numConds(f0).length || dialTags(f0).length) && !RE_DOSE.test(f0) && !/[：:]/.test(f0))
+      return ls.slice(1).join("\n").trim().replace(/[；;]\s*$/, "");
+  }
   const i = seg.search(/[：:]/);
   if (i > -1 && i < seg.length - 1){
     const left = seg.slice(0, i), right = seg.slice(i + 1).trim();
@@ -1018,10 +1037,42 @@ function doseOf(seg){
 const EMPTY_RE = /^(?:[-–—─]+|n\/?a|na|no\s*data|無|無資料|無相關資料|none|nil|不適用|未提及|\?+)$/i;
 const cell = v => { v = (v || "").trim(); return EMPTY_RE.test(v) ? "" : v; };
 
+/* 「腎功能調整頻率」欄沒有自己的條件時，靠換行與「腎功能調整」逐行對齊：
+   每一段腎功能條文佔哪幾行，頻率欄同樣那幾行就是它的頻率 */
+const freqOwnCond = v => splitSegs(v).some(x => matchSeg(x).parsed);
+function alignFreq(renalRaw, freqRaw){
+  const R = String(renalRaw || "").split(/\r?\n/), F = String(freqRaw || "").split(/\r?\n/);
+  const segs = splitSegs(renalRaw), start = [];
+  let pos = 0;
+  segs.forEach(sg => {
+    const first = sg.split("\n")[0].trim();
+    let i = pos;
+    while (i < R.length && !(R[i].trim() && (R[i].trim() === first || R[i].includes(first) || first.includes(R[i].trim())))) i++;
+    if (i >= R.length) i = pos;
+    start.push(i); pos = i;
+  });
+  return segs.map((sg, k) => {
+    let e = R.length;
+    for (let j = k + 1; j < segs.length; j++) if (start[j] > start[k]){ e = start[j]; break; }
+    const idx = []; for (let i = start[k]; i < e; i++) if (R[i].trim()) idx.push(i);
+    const disp = idx.map(i => (F[i] || "").trim()); while (disp.length && !disp[disp.length - 1]) disp.pop();
+    // freq：計算用（去空行）；disp：畫面用，與腎功能條文逐行對齊
+    return {seg:sg, freq:F.slice(start[k], e).map(x => x.trim()).filter(Boolean).join("\n"), disp:disp.join("\n")};
+  });
+}
+const pairedFreq = (r, c) => PAIR[c] != null && cell(r[PAIR[c]]) && !freqOwnCond(cell(r[c]));
+
 function findingsFor(r, t){
   const out = [];
   traitCols(t).forEach(c => {
     const val = cell(r[c]); if (!val) return;
+    if (pairedFreq(r, c)){
+      const al = alignFreq(r[PAIR[c]], r[c]).map(x => ({s:x.freq, m:matchSeg(x.seg)}));
+      const hits = al.filter(x => x.s && (x.m.match || !x.m.parsed)).map(x => x.s);
+      if (hits.length) out.push({col:c, head:HEAD[c], group:"", val, segs:al.filter(x => x.s),
+                                 hits, anyParsed:true, whole:false, src:srcFor(c, r)});
+      return;
+    }
     const segs = splitSegs(val).map(s => ({s, m: matchSeg(s)}));
     const anyParsed = segs.some(x => x.m.parsed);
     // 命中條件的片段，加上「本身沒有任何條件」的片段——後者是無條件適用的敘述
@@ -1324,6 +1375,13 @@ function filtered(terms){
     const hay = norm(r[0]) + "|" + norm(r[1]);
     return keys.every(k => hay.includes(k));
   });
+}
+function segPairCell(renalRaw, freqRaw){
+  return `<div class="segp">` + alignFreq(renalRaw, freqRaw).map(x => {
+    const m = matchSeg(x.seg), cls = m.match ? " hit" : (m.parsed ? " dim" : "");
+    return `<div class="seg${cls}">${m.match ? '<span class="tick">✓</span>' : ""}${esc(x.seg)}</div>` +
+           `<div class="seg fq${cls}">${esc(x.disp)}</div>`;
+  }).join("") + `</div>`;
 }
 function segCell(text){
   const segs = splitSegs(text);
@@ -1816,6 +1874,15 @@ function cards(rows, terms){
     const fs = [];
     for (let c = 3; c < BASIC_COLS; c++){
       if (!HEAD[c]) continue;
+      if (pairedFreq(r, c)) continue;                 // 已併入左邊的腎功能調整欄
+      const fc = Object.keys(PAIR).find(k => PAIR[k] === c);
+      if (fc != null && pairedFreq(r, +fc)){
+        const act = on && colTraits(c).some(t => acts.includes(t));
+        const inner = act ? segPairCell(r[c], r[fc])
+          : `<div class="segp">` + alignFreq(r[c], r[fc]).map(x => `<div class="seg">${esc(x.seg)}</div><div class="seg fq">${esc(x.disp)}</div>`).join("") + `</div>`;
+        fs.push(`<div class="f wide"><div class="k">${esc(HEAD[c])}｜頻率</div>${inner}</div>`);
+        continue;
+      }
       const val = (r[c] || "").trim();
       const bt = extraBtns(r, HEAD[c]);
       const act = on && colTraits(c).some(t => acts.includes(t));
