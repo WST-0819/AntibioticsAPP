@@ -460,7 +460,7 @@ const BUILTIN_HTML = { amg: "<!DOCTYPE html>\n<html lang=\"zh-Hant\">\n<head>\n<
 const BUILTIN_TITLE = { vanco: "Vancomycin 計算器", amg: "Aminoglycoside 計算器" };
 const SHEET_ID = "15JAyvXkQbDUWUPUpz2ZCQUw373DtBDLCbQqFdrPemCw";
 const GID = "1596306221"; // 成人
-const BASIC_COLS = 9;     // A-I
+let BASIC_COLS = 9;       // 基本區欄數（藥名…資料來源），parse() 依分類標題自動判定
 
 let HEAD = [], ROWS = [], GROUPS = [], COLG = [], MODE = 0;
 let ROUTES = [], ROUTE_SEL = [];   // 給藥途徑清單／目前勾選（空 = 全部） // -1 = 個人化建議，0 = 基本資訊，1.. = GROUPS[i-1]
@@ -532,6 +532,13 @@ function parse(raw){
   const g = raw[0] || [], h = raw[1] || [];
   const width = Math.max(g.length, h.length);
   HEAD = []; for (let i = 0; i < width; i++) HEAD.push((h[i] || "").trim());
+  // 基本區＝「成人劑量」之後第一個分類標題（如 血液透析-HD）之前的欄位
+  { let b = -1; for (let i = 4; i < width; i++) if ((g[i] || "").trim()){ b = i; break; }
+    BASIC_COLS = b > 0 ? b : 9; }
+  // 緊接在「腎功能調整」後面的「頻率」欄屬於腎功能調整，改名以便歸類與顯示
+  for (let i = 1; i < BASIC_COLS; i++)
+    if (/^(?:頻率|頻次|frequency)$/i.test(HEAD[i]) && /腎功能|renal|crcl|egfr/i.test(HEAD[i-1]) && !/頻率/.test(HEAD[i-1]))
+      HEAD[i] = HEAD[i-1].replace(/頻率$/, "") + "頻率";
   GROUPS = []; let cur = null;
   for (let i = BASIC_COLS; i < width; i++){
     const label = (g[i] || "").trim();
