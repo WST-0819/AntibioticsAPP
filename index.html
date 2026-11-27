@@ -158,11 +158,12 @@
   .seg.dim{color:var(--muted)}
   .f.wide{grid-column:span 2}
   .f.full{grid-column:1/-1}
-  .btab{border-collapse:collapse;width:100%;margin:2px 0 0;background:transparent}
+  .btab{border-collapse:collapse;width:auto;min-width:0;max-width:100%;margin:2px 0 0;background:transparent}
   .btab th{position:static;background:transparent;text-align:left;font-size:11px;font-weight:500;color:var(--muted);
-    letter-spacing:.04em;padding:2px 14px 4px 0;border-bottom:1px solid var(--line)}
-  .btab td{font-size:13.5px;padding:5px 14px 5px 0;vertical-align:top;white-space:pre-wrap;border-bottom:1px dashed var(--line)}
+    letter-spacing:.04em;padding:2px 28px 4px 0;border-bottom:1px solid var(--line)}
+  .btab td{font-size:13.5px;padding:5px 28px 5px 0;vertical-align:top;white-space:pre-wrap;border-bottom:1px dashed var(--line)}
   .btab tbody tr:last-child td{border-bottom:0}
+  .btab th:last-child,.btab td:last-child{padding-right:8px}
   .btab td.cnd{white-space:nowrap;color:var(--muted)}
   .btab tr.gen td.cnd{color:inherit;font-weight:600}
   .btab tr.hit td{background:var(--hit);color:var(--hit-text);font-weight:600}
