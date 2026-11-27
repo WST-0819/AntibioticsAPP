@@ -157,6 +157,17 @@
   .seg.hit .tick{font-weight:800;margin-right:4px}
   .seg.dim{color:var(--muted)}
   .f.wide{grid-column:span 2}
+  .f.full{grid-column:1/-1}
+  .btab{border-collapse:collapse;width:100%;margin:2px 0 0;background:transparent}
+  .btab th{position:static;background:transparent;text-align:left;font-size:11px;font-weight:500;color:var(--muted);
+    letter-spacing:.04em;padding:2px 14px 4px 0;border-bottom:1px solid var(--line)}
+  .btab td{font-size:13.5px;padding:5px 14px 5px 0;vertical-align:top;white-space:pre-wrap;border-bottom:1px dashed var(--line)}
+  .btab tbody tr:last-child td{border-bottom:0}
+  .btab td.cnd{white-space:nowrap;color:var(--muted)}
+  .btab tr.gen td.cnd{color:inherit;font-weight:600}
+  .btab tr.hit td{background:var(--hit);color:var(--hit-text);font-weight:600}
+  .btab tr.hit td.cnd{border-left:3px solid var(--hit-line);padding-left:8px}
+  .btab tr.dim td{color:var(--muted)}
   .segp{display:grid;grid-template-columns:minmax(0,1fr) auto}
   .segp .seg{padding-right:10px}
   .segp .seg.fq{padding-left:10px;padding-right:8px;white-space:pre-wrap}
@@ -1868,12 +1879,54 @@ function table(rows, g, terms){
     }).join("") + "</tr>").join("");
   return `<div class="tblwrap"><table><thead><tr><th>藥品 / 成分</th>${th}</tr></thead><tbody>${body}</tbody></table></div>`;
 }
+/* 基本資料卡：一般劑量與腎功能調整整合成一張表
+   欄＝速效劑量／維持劑量／頻率（同試算表），列＝一般、各段腎功能條件；
+   腎功能頻率欄依換行逐行對齊，不必重複寫頻率。頻率欄自帶條件時不整合，照舊分欄顯示。 */
+function splitCond(seg){
+  const d = doseOf(seg);
+  if (d === seg || !seg.endsWith(d)) return {c:"", d:seg};
+  return {c:seg.slice(0, seg.length - d.length).replace(/[：:\s]+$/, "").trim(), d};
+}
+function basicTable(r, on, acts){
+  let rc = -1;
+  for (let c = 3; c < BASIC_COLS; c++) if (PAIR[c] == null && colFam(c) === "renal"){ rc = c; break; }
+  if (rc < 0) return null;
+  const fcK = Object.keys(PAIR).find(k => PAIR[k] === rc), fc = fcK != null ? +fcK : -1;
+  if (fc >= 0 && cell(r[fc]) && !pairedFreq(r, fc)) return null;
+  const gen = [];
+  for (let c = 3; c < rc; c++) if (HEAD[c] && !isSrcCol(c) && !colFam(c)) gen.push(c);
+  const fq = gen.find(c => RE_FREQ.test(HEAD[c]));
+  const main = [...gen].reverse().find(c => c !== fq && !RE_LOAD.test(HEAD[c])) ?? gen[0];
+  if (main == null) return null;
+  const cols = gen.filter(c => c === main || c === fq || cell(r[c]));   // 空的速效劑量欄不顯示
+  const used = new Set([...gen, rc]); if (fc >= 0) used.add(fc);
+  const renalOn = on && acts.some(t => t.key === "renal");
+  const td = (v, cls) => `<td${cls ? ` class="${cls}"` : ""}>${esc(v || "")}</td>`;
+  let body = `<tr class="gen">${td("一般", "cnd")}${cols.map(c => td(cell(r[c]) || "—")).join("")}</tr>`;
+  const rv = cell(r[rc]);
+  if (rv) alignFreq(r[rc], fc >= 0 ? r[fc] : "").forEach(x => {
+    const {c, d} = splitCond(x.seg);
+    let f = (x.disp || "").split("\n");
+    const drop = x.seg.split("\n").length - d.split("\n").length;   // 條件獨立成行時，頻率也去掉那幾行
+    if (drop > 0) f = f.slice(drop);
+    f = f.join("\n").replace(/\n+$/, "");
+    const m = matchSeg(x.seg);
+    const cls = renalOn ? (m.match ? "hit" : (m.parsed ? "dim" : "")) : "";
+    body += `<tr${cls ? ` class="${cls}"` : ""}>${td((cls === "hit" ? "✓ " : "") + (c || HEAD[rc]), "cnd")}` +
+      cols.map(k => td(k === main ? d : k === fq ? f : "")).join("") + `</tr>`;
+  });
+  const html = `<div class="f full"><div class="k">劑量（一般／${esc(HEAD[rc])}）</div>` +
+    `<table class="btab"><thead><tr><th>條件</th>${cols.map(c => `<th>${esc(HEAD[c])}</th>`).join("")}</tr></thead><tbody>${body}</tbody></table></div>`;
+  return {html, used};
+}
 function cards(rows, terms){
   const on = ptReady(), acts = activeTraits();
   return rows.map(r => {
-    const fs = [];
+    const fs = [], bt0 = basicTable(r, on, acts);
+    if (bt0) fs.push(bt0.html);
     for (let c = 3; c < BASIC_COLS; c++){
       if (!HEAD[c]) continue;
+      if (bt0 && bt0.used.has(c)) continue;           // 已整合進上方的劑量表
       if (pairedFreq(r, c)) continue;                 // 已併入左邊的腎功能調整欄
       const fc = Object.keys(PAIR).find(k => PAIR[k] === c);
       if (fc != null && pairedFreq(r, +fc)){
