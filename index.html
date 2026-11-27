@@ -1124,6 +1124,18 @@ function baseDoseCols(r){
       });
       for (let i = out.length - 1; i >= 0; i--) if (!out[i].val) out.splice(i, 1);
       out.condSel = sel.map(x => ({seg:x.seg, src:mc.src, head:mc.head}));
+    } else if (al.some(x => x.m.parsed) && activeTraits().some(t => t.key === "renal")){
+      // 有寫 CrCl 條件、病人也有腎功能，但沒有任何一段涵蓋 → 標示未比中；整段原文逐行對齊列出（空白行保留位置）
+      out.condMiss = true;
+      const Z = "\u200b";
+      mc.val = al.flatMap(x => x.seg.split("\n")).join("\n");
+      out.filter(x => x !== mc && !freqOwnCond(x.val)).forEach(x => {
+        const ax = alignFreq(r[mc.col], r[x.col]);
+        x.val = ax.flatMap(y => { const d = (y.disp || "").split("\n"), n = y.seg.split("\n").length;
+          return Array.from({length:n}, (_, i) => (d[i] || "").trim() || Z); }).join("\n");
+        if (!x.val.replace(/[\u200b\n]/g, "")) x.val = "";
+      });
+      for (let i = out.length - 1; i >= 0; i--) if (!out[i].val) out.splice(i, 1);
     }
   }
   return out;
@@ -1282,6 +1294,14 @@ function synth(r){
     res.modifiers.push(row);
     if (rv.kind === "dose") res.conflicts.push(row);
   });
+  // 一般劑量欄內有 CrCl 條件但病人腎功能不在任何一段內
+  if (bd.condMiss && res.base && res.base.fromGeneral){
+    const rt = acts.find(t => t.key === "renal");
+    res.baseNeedsCheck = true; res.condMiss = true;
+    res.baseVia = (rt ? rt.label + " " + rt.note(p) : "腎功能") + " → 維持劑量欄內條件未涵蓋";
+    res.missing = res.missing.filter(m => m.trait !== rt);
+    if (rt) res.missing.push({trait:rt, hasCol:true});
+  }
   return res;
 }
 
@@ -1797,6 +1817,7 @@ function conclusion(r, s){
     if (m.trait.key === "obese"){ const xs = obwCalc(mv, obeseDoseWeight(r, p)); if (xs.length) mv += "\n目前體重換算：" + obeseDoseWeight(r, p).tag + " " + r1(obeseDoseWeight(r, p).w) + " kg\n" + xs.join("\n"); }
     st2.push({t:m.trait.label, use:true, v:mv, src:msrcs.join("／")});
   });
+  if (s.condMiss) st2.push({t:"腎功能", use:false, note:"病人 CrCl 不在維持劑量欄任何一段條件內"});
   if (s.pedsRenal) st2.push({t:s.pedsRenal.dial ? "腎臟替代治療" : "腎功能", use:false, note:"表內為成人資料，兒童不適用"});
   const hepT = TRAITS.find(t => t.key === "hep");
   const hepKid = p.age != null && p.age < 18 && hepT && availOK(hepT) && traitCols(hepT).some(c => cell(r[c]));
@@ -1828,9 +1849,11 @@ function conclusion(r, s){
   }
   if (s.conflicts.length)
     notes.push(`<div class="cwarn">⚠ ${esc(s.conflicts.map(c => c.trait.label).join("、"))} 另有具體劑量建議，與上方劑量不是可直接相加的獨立調整，須人工整合後決定。</div>`);
-  if (s.baseNeedsCheck && !kidNoPeds)
+  if (s.condMiss && !kidNoPeds)
+    notes.push(`<div class="cwarn">⚠ 病人${esc(s.baseVia.replace(/ → .*$/, ""))} 不在維持劑量欄任何一段 CrCl 條件範圍內，上方列出全部條文，請自行判讀或補齊表中條件。</div>`);
+  else if (s.baseNeedsCheck && !kidNoPeds)
     notes.push(`<div class="cwarn">⚠ 目前符合的族群條件在表中未比中可用條文，上方顯示的是一般成人劑量，未經該族群校正。</div>`);
-  const miss = s.missing.filter(m => m.hasCol), nocol = s.missing.filter(m => !m.hasCol);
+  const miss = s.missing.filter(m => m.hasCol && !(s.condMiss && m.trait.key === "renal")), nocol = s.missing.filter(m => !m.hasCol);
   if (miss.length || nocol.length){
     const a1 = miss.length ? `${miss.map(m => m.trait.label).join("、")}：表中有欄位但未比中條件，請看下方原文。` : "";
     const b1 = nocol.length ? `${nocol.map(m => m.trait.label).join("、")}：此藥表中無對應族群資料。` : "";
